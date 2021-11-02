@@ -1,1 +1,9 @@
 # tiddlyd2
+
+This is an in-progress project to provide tools for working with TiddlyWiki using D rather than Javascript. The current goals are:
+
+- Provide a server that separates the tiddler file from the several MB of other code that make up the main TiddlyWiki app. The vast majority of space taken by TiddlyWiki is allocated to the app itself rather than the user's content. That makes it a mess to put under version control. Not only is it difficult to work with large files that have extremely long lines (open it in a text editor and start scrolling if you aren't familiar with the inside of TiddlyWiki), it is inconvenient to view just the content of your files, which is normally all you want to do anyway.
+- Provide an app that converts a directory of markdown files into a TiddlyWiki site. The generated site can include subdirectories if desired.
+- Provide an app that scans a directory of markdown files for "tiddly blocks" and convert them into a TiddlyWiki site. The motivation for this is my use of daily pages in Obsidian. I love the convenience and organization provided by daily pages. Unfortunately, it's not the best experience to review important data (like tasks you have to do or links you encounter during the day) across all your daily pages. This allows me to enter data directy in my daily pages using templates, then automate the process of reviewing only the important stuff. IMO, TiddlyWiki is a weak option for entering content, but the best option for querying and reviewing it.
+    - Note: Conversion of directories was motivated by my use of Obsidian. There's nothing specific to Obsidian. The same could be done using a system like Dendron or a simple text editor like Geany to create the markdown files.
+- Support any recent (version 5.2 or later) TiddlyWiki file as a template for the generated site. That means you can make any customizations, install plugins, install themes, or whatever, and build your site with it.
