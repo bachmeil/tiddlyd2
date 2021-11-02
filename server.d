@@ -6,29 +6,48 @@ void hello(Cgi cgi) {
   cgi.header("dav: tw5/put");
 
 	string filename;
+	string fn = "empty52";
 	if (cgi.pathInfo == "/") {
-		filename = "empty.html";
+		filename = "empty52.html";
 	} else {
-	  filename = setExtension(cgi.pathInfo[1..$], "html");
+	  //filename = setExtension(cgi.pathInfo[1..$], "html");
+	  filename = "empty52.html";
 	}
 	
   if (cgi.requestMethod.to!string == "PUT") {
-		string tid = cgi.postBody;
-		std.file.write("log.html", tid);
-		string[] tid1 = tid.split("<!--~~ Ordinary tiddlers ~~-->");
-		// Pull out the stuff on the inside and parse with std.json
-		// Omit all tiddlers based on the configuration variable at the top
-		string[] tid2 = tid1[1].split("<!--~~ Library modules ~~-->");
-		ulong ind1 = tid2[0].indexOf(`<div author="JeremyRuston" core-version="&gt;=5.0.0" dependents="" description="Basic theme" `); 
-		ulong ind2 = tid2[0].indexOf("<div created=\"", ind1);
-    std.file.write("usercontent.html", tid2[0][ind2..$].strip[0..$-6].strip ~ "\n");
+    std.file.write("usercontent.html", removeCore(cgi.postBody));
   } else if (cgi.requestMethod.to!string == "GET") {
-		//~ if (filename.exists) {
-			string htmlFile = readText("wikitop.html") ~ readText("usercontent.html") ~ readText("wikibottom.html");
-			cgi.write(htmlFile);
-		//~ } else {
-			//~ cgi.write("There's no file named " ~ filename);
-		//~ }
-  }
+		if (filename.exists) {
+			if (exists("usercontent.html")) {
+				cgi.write(readText(fn ~ "_top.html") ~ readText("core.html") ~ readText("usercontent.html") ~ readText(fn ~ "_bottom.html"));
+			} else {
+				cgi.write("You need to run tiddlyutils strip to create your template file, core.html, and usercontent.html");
+			}
+		}
+	}
 }
 mixin GenericMain!hello;
+
+string removeCore(string htmlfile) {
+	string txt1 = `<script class="tiddlywiki-tiddler-store" type="application/json">[
+{`;
+	string txt2 = `}
+]</script><div id="storeArea" style="display:none;"></div>`;
+	string[] tid1 = htmlfile.split(txt1);
+	string[] tid2 = tid1[1].split(txt2);
+	string currentContent = tid2[0];
+	string strippedContent;
+	foreach(line; currentContent.split("\n")) {
+		if (line.startsWith(`"title":"$:/core",`)) {
+			std.file.write("core.html", line);
+		} else {
+			if (line.length > 50) {
+				writeln(line[0..50]);
+			} else {
+				writeln(line);
+			}
+			strippedContent ~= line ~ "\n";
+		}
+	}
+	return strippedContent;
+}
