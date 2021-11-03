@@ -17,8 +17,9 @@
  *   be the same as file1. If not specified, file2 is set to file1_stripped.html.
  * tiddlyutils update file1 will update core, top, bottom, and plugins. usercontent.html is not affected.
  */
-import std.algorithm, std.array, std.datetime, std.exception, std.file, std.path;
-import std.process, std.stdio, std.string;
+import std.algorithm, std.array, std.conv, std.datetime, std.exception;
+import std.file, std.path;
+import std.process, std.regex, std.stdio, std.string;
 
 void main(string[] args) {
 	enforce(args.length > 1, "You have to supply arguments to tiddlyutils");
@@ -50,6 +51,16 @@ void main(string[] args) {
 			~ tiddlers
 			~ `</div>`));
 	} else if (args[1] == "blocks") {
+	  auto re = regex(`<pre><tiddly>.*?</tiddly></pre>`, "s");
+		string tiddlers;
+		foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow)) {
+			if (f.isFile) {
+				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re))) {
+					tiddlers ~= tmp ~ "\n";
+				}
+			}
+		}
+		std.file.write("obsidiantiddly.html", readText("empty52_top.html") ~ readText("core.html") ~ readText("plugins.html") ~ readText("empty52_bottom.html").replace(`<div id="storeArea" style="display:none;"></div>`, `<div id="storeArea" style="display:none;">` ~ tiddlers ~ `</div>`));
 	} else if (args[1] == "strip") {
 		enforce(!exists("usercontent.html"), "Cannot run tiddlyutils strip if usercontent.html already exists. Rename that file or delete it and rerun this command.");			
 		if (args.length > 3) {
@@ -135,4 +146,36 @@ string sq(string s) {
 // Replace all angle brackets
 string deangle(string s) {
 	return s.replace("<", "&lt;").replace(">", "&gt;");
+}
+
+string[] tiddlyBlocks(string s, Regex!char re) {
+  string[] result;
+  foreach(m; s.matchAll(re)) {
+    result ~= m[0].to!string["<pre><tiddler>".length..$-"</pre></tiddler>".length];
+  }
+  return result;
+}
+
+string[] convertTiddlers(string[] tiddlers) {
+	string aux(string s, string result="<div") {
+		long ind = s.indexOf("\n");
+		auto line = s[0..ind];
+		if (line.startsWith("---")) {
+			string content = s[ind+1..$];
+			return result ~ "><pre>" ~ content.toHtml().deangle ~ "</pre></div>";
+		} else {
+			string[] data = line.split(":");
+			string attr = data[0].strip ~ `="` ~ data[1].strip ~ `"`;
+			if (data[0].strip == "created") {
+				attr ~= ` modified="` ~ data[1].strip ~ `"`;
+			}
+			return aux(s[ind+1..$], result ~ " " ~ attr);
+		}
+	}
+	
+	string[] result;
+	foreach(tiddler; tiddlers) {
+		result ~= aux(tiddler);
+	}
+	return result;
 }

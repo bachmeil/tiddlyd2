@@ -3345,9 +3345,10 @@ bool trySimulatedRequest(alias fun, CustomCgi = Cgi)(string[] args) if(is(Custom
 	History:
 		Added Sept 26, 2020 (release version 8.5).
 +/
+// Changed by Lance Bachmeier to guarantee nobody else can listen
 struct RequestServer {
 	///
-	string listeningHost = defaultListeningHost();
+	string listeningHost = "127.0.0.1";
 	///
 	ushort listeningPort = defaultListeningPort();
 
@@ -3372,7 +3373,8 @@ struct RequestServer {
 				foundPort = false;
 			}
 			if(foundHost) {
-				listeningHost = arg;
+				//~ listeningHost = arg;
+				listeningHost = "127.0.0.1";
 				foundHost = false;
 			}
 			if(arg == "--listening-host" || arg == "-h" || arg == "/listening-host")
