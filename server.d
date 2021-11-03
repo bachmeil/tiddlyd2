@@ -15,11 +15,11 @@ void hello(Cgi cgi) {
 	}
 	
   if (cgi.requestMethod.to!string == "PUT") {
-    std.file.write("usercontent.html", removeCore(cgi.postBody));
+    std.file.write("usercontent.html", removeApp(cgi.postBody));
   } else if (cgi.requestMethod.to!string == "GET") {
 		if (filename.exists) {
 			if (exists("usercontent.html")) {
-				cgi.write(readText(fn ~ "_top.html") ~ readText("core.html") ~ readText("usercontent.html") ~ readText(fn ~ "_bottom.html"));
+				cgi.write(readText(fn ~ "_top.html") ~ readText("core.html") ~ readText("plugins.html") ~ readText("usercontent.html") ~ readText(fn ~ "_bottom.html"));
 			} else {
 				cgi.write("You need to run tiddlyutils strip to create your template file, core.html, and usercontent.html");
 			}
@@ -28,7 +28,7 @@ void hello(Cgi cgi) {
 }
 mixin GenericMain!hello;
 
-string removeCore(string htmlfile) {
+string removeApp(string htmlfile) {
 	string txt1 = `<script class="tiddlywiki-tiddler-store" type="application/json">[
 {`;
 	string txt2 = `}
@@ -38,8 +38,7 @@ string removeCore(string htmlfile) {
 	string currentContent = tid2[0];
 	string strippedContent;
 	foreach(line; currentContent.split("\n")) {
-		if (line.startsWith(`"title":"$:/core",`)) {
-			std.file.write("core.html", line);
+		if (line.startsWith(`"title":"$:/core",`) | line.startsWith(`{"title":"$:/plugins`)) {
 		} else {
 			if (line.length > 50) {
 				writeln(line[0..50]);
