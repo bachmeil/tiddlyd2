@@ -25,7 +25,7 @@ void main(string[] args) {
 	enforce(args.length > 1, "You have to supply arguments to tiddlyutils");
 	
 	if ( (args[1] == "md") | (args[1] == "deepmd") ) {
-		// args[2]: dir args[3]: template args[4]: outputfile
+		// args[2]: dir args[3]: template
 		string tiddlers;
 		if (args[1] == "md") {
 			foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow).array.sort!"a > b") {
@@ -40,12 +40,8 @@ void main(string[] args) {
 				}
 			}
 		}
-		string outputFile = "twsite.html";
-		if (args.length > 4) {
-			outputFile = setExtension(expandTilde(args[4]), "html");
-		}
 		string templateFile = setExtension(expandTilde(args[3]), "html");
-		std.file.write(outputFile, readText(templateFile).replace(
+		std.file.write("twsite.html", readText(templateFile).replace(
 			`<div id="storeArea" style="display:none;"></div>`,
 			`<div id="storeArea" style="display:none;">`
 			~ tiddlers
@@ -60,7 +56,11 @@ void main(string[] args) {
 				}
 			}
 		}
-		std.file.write("obsidiantiddly.html", readText("empty52_top.html") ~ readText("core.html") ~ readText("plugins.html") ~ readText("empty52_bottom.html").replace(`<div id="storeArea" style="display:none;"></div>`, `<div id="storeArea" style="display:none;">` ~ tiddlers ~ `</div>`));
+		string templateFile = setExtension(expandTilde(args[3]), "html");std.file.write("obsidiantiddly.html", readText(templateFile).replace(
+			`<div id="storeArea" style="display:none;"></div>`,
+			`<div id="storeArea" style="display:none;">`
+			~ tiddlers
+			~ `</div>`));
 	} else if (args[1] == "strip") {
 		enforce(!exists("usercontent.html"), "Cannot run tiddlyutils strip if usercontent.html already exists. Rename that file or delete it and rerun this command.");			
 		if (args.length > 3) {
@@ -73,32 +73,32 @@ void main(string[] args) {
 ]</script><div id="storeArea" style="display:none;"></div>`;
 		string[] tid1 = f.split(txt1);
 		string[] tid2 = tid1[1].split(txt2);
-		std.file.write(args[2] ~ "_top.html", tid1[0] ~ txt1);
-		std.file.write(args[2] ~ "_bottom.html", txt2 ~ tid2[1]);
+		std.file.write("top.html", tid1[0] ~ txt1);
+		std.file.write("bottom.html", txt2 ~ tid2[1]);
 		
 		string currentContent = tid2[0].strip;
-		string strippedContent;
-		string plugins = "";
+		string other;
+		string core;
 		foreach(line; currentContent.split("\n")) {
 			if (line.startsWith(`"title":"$:/core",`)) {
-				std.file.write("core.html", line);
+				core ~= line ~ "\n";
 			} else if (line.startsWith(`"title":"$:/plugin`)) {
-				plugins ~= line;
+				core ~= line ~ "\n";
 			} else {
 				if (line.length > 50) {
 					writeln(line[0..50]);
 				} else {
 					writeln(line);
 				}
-				strippedContent ~= line ~ "\n";
+				other ~= line ~ "\n";
 			}
 		}
-		std.file.write("plugins.html", plugins);
-		std.file.write("usercontent.html", strippedContent);
+		// Themes and any other stuff
+		std.file.write("other.html", other);
+		std.file.write("usercontent.html", other);
+		// Core app and plugins, not user data, very large
+		std.file.write("core.html", core);
 	} else if (args[1] == "update") {
-		if (args.length > 3) {
-			enforce(setExtension(args[3].strip, "html") != setExtension(args[2].strip, "html"));
-		}
 		string f = readText(setExtension(expandTilde(args[2]), "html"));
 		string txt1 = `<script class="tiddlywiki-tiddler-store" type="application/json">[
 {`;
@@ -106,19 +106,21 @@ void main(string[] args) {
 ]</script><div id="storeArea" style="display:none;"></div>`;
 		string[] tid1 = f.split(txt1);
 		string[] tid2 = tid1[1].split(txt2);
-		std.file.write(args[2] ~ "_top.html", tid1[0] ~ txt1);
-		std.file.write(args[2] ~ "_bottom.html", txt2 ~ tid2[1]);
+		std.file.write("top.html", tid1[0] ~ txt1);
+		std.file.write("bottom.html", txt2 ~ tid2[1]);
 		
 		string currentContent = tid2[0].strip;
-		string plugins = "";
+		string core;
+		// Ignore the user's data
+		// For updating core and plugins
 		foreach(line; currentContent.split("\n")) {
 			if (line.startsWith(`"title":"$:/core",`)) {
-				std.file.write("core.html", line);
+				core ~= line ~ "\n";
 			} else if (line.startsWith(`{"title":"$:/plugins`)) {
-				plugins ~= line;
+				core ~= line ~ "\n";
 			}
 		}
-		std.file.write("plugins.html", plugins);
+		std.file.write("core.html", core);
 	}
 }
 

@@ -19,7 +19,7 @@ void hello(Cgi cgi) {
   } else if (cgi.requestMethod.to!string == "GET") {
 		if (filename.exists) {
 			if (exists("usercontent.html")) {
-				cgi.write(readText(fn ~ "_top.html") ~ readText("core.html") ~ readText("plugins.html") ~ readText("usercontent.html") ~ readText(fn ~ "_bottom.html"));
+				cgi.write(readText("top.html") ~ readText("core.html") ~ readText("usercontent.html") ~ readText("bottom.html"));
 			} else {
 				cgi.write("You need to run tiddlyutils strip to create your template file, core.html, and usercontent.html");
 			}
