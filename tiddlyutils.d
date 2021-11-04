@@ -189,8 +189,17 @@ string openTasks(string f) {
 		}
 		auto ind = content.indexOf("\n- [ ] ");
 		if (ind > 0) {
-			result ~= firstTask(content[ind+1..$])[0];
-			return aux(content[ind+1..$]);
+			writeln("------------------->>>");
+			writeln("content: ", content[ind+1..$], "\n<<<<<<-----------");
+			string ft = firstTask(content[ind..$]);
+			writeln("first task: ", ft);
+			result ~= ft;
+			auto nextInd = content.indexOf("\n- [ ] ", 5);
+			if (nextInd < 0) {
+				return;
+			} else {
+				return aux(content[nextInd+1..$]);
+			}
 		} else {
 			return;
 		}
@@ -202,39 +211,34 @@ string openTasks(string f) {
 }
 
 /* Return the first task in this string */
-string[2] firstTask(string s) {
+string firstTask(string s) {
 	string result;
-	string after;
 	void otherLines(string str) {
 		if (str.length == 0) {
-			writeln("== 0: ", result);
 			return;
 		}
 		
 		// If a new list item, done
 		if (str.startsWith("- ")) {
-			after = str;
-			writeln("- :", result);
+			writeln("--1--");
 			return;
 		}
 		// If a blank line not ending in two spaces, done
-		else if ((str == "\n") | (str == " \n")) {
-			writeln("blank line:", result);
-			after = str;
+		else if ((str == "") | (str == " ") | (str == "\n") | (str == " \n")) {
+			writeln("--2--");
 			return;
 		}
 		auto ind1 = str.indexOf("\n");
 		// This line is part of the first task if we're here
 		// If this is the last line in the file, done
 		if (ind1 < 0) {
-			after = "";
+			writeln("--3--");
 			result ~= str;
-			writeln("< 0: ", result);
 			return;
 		// If we're here, keep going
 		}	else {
+			writeln("--4--  ", str[0..ind1]);
 			result ~= str[0..ind1] ~ "\n";
-			writeln("keep going: ", str[0..ind1]);
 			return otherLines(str[ind1+1..$]);
 		}
 	}
@@ -243,12 +247,12 @@ string[2] firstTask(string s) {
 	auto endLine = s.indexOf("\n");
 	// If this is the end of the file, we're done
 	if (endLine < 0) {
-		return [s, ""];
+		return s;
 	} else {
 	// Otherwise save this line and check the next lines
 		result ~= s[0..endLine] ~ "\n";
 		otherLines(s[endLine+1..$]);
-		return [result, s[endLine+1..$]];
+		return result;
 	}
 }
 
