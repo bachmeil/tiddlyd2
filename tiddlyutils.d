@@ -25,6 +25,7 @@ void main(string[] args) {
 	enforce(args.length > 1, "You have to supply arguments to tiddlyutils");
 	
 	if ( (args[1] == "md") | (args[1] == "deepmd") ) {
+		
 		// args[2]: dir args[3]: template
 		string tiddlers;
 		if (args[1] == "md") {
@@ -46,6 +47,9 @@ void main(string[] args) {
 			`<div id="storeArea" style="display:none;">`
 			~ tiddlers
 			~ `</div>`));
+		writeln("Created file twsite.html");
+
+
 	} else if (args[1] == "blocks") {
 	  auto re = regex(`<pre><tiddly>.*?</tiddly></pre>`, "s");
 		string tiddlers;
@@ -56,11 +60,34 @@ void main(string[] args) {
 				}
 			}
 		}
-		string templateFile = setExtension(expandTilde(args[3]), "html");std.file.write("obsidiantiddly.html", readText(templateFile).replace(
+		string templateFile = setExtension(expandTilde(args[3]), "html");
+		std.file.write("obsidiantiddly.html", readText(templateFile).replace(
 			`<div id="storeArea" style="display:none;"></div>`,
 			`<div id="storeArea" style="display:none;">`
 			~ tiddlers
 			~ `</div>`));
+		writeln("Created file obsidiantiddly.html");
+		
+
+	} else if (args[1] == "tasks") {
+		string mdfile;
+		foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow).array.sort!"a > b") {
+			writeln(f);
+			if (f.isFile) {
+				string tasks = openTasks(f);
+				if (tasks.length > 0) {
+					mdfile ~= "# " ~ stripExtension(baseName(f)) ~ "\n\n" ~ tasks ~ "\n\n";
+				}
+			}
+		}
+		string templateFile = setExtension(expandTilde(args[3]), "html");
+		std.file.write("opentasks.html", readText(templateFile).replace(
+			`<div id="storeArea" style="display:none;"></div>`,
+			`<div id="storeArea" style="display:none;">`
+			~ createTiddler(mdfile, "Open Tasks") ~
+			`</div>`));
+		writeln("Created file opentasks.html");
+
 	} else if (args[1] == "strip") {
 		enforce(!exists("usercontent.html"), "Cannot run tiddlyutils strip if usercontent.html already exists. Rename that file or delete it and rerun this command.");			
 		if (args.length > 3) {
@@ -98,6 +125,8 @@ void main(string[] args) {
 		std.file.write("usercontent.html", other);
 		// Core app and plugins, not user data, very large
 		std.file.write("core.html", core);
+
+
 	} else if (args[1] == "update") {
 		string f = readText(setExtension(expandTilde(args[2]), "html"));
 		string txt1 = `<script class="tiddlywiki-tiddler-store" type="application/json">[
@@ -124,6 +153,18 @@ void main(string[] args) {
 	}
 }
 
+/* Create a tiddler out of a string */
+string createTiddler(string s, string title) {
+	string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
+	return `<div created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ title ~ `">
+<pre>
+` ~ s.toHtml.deangle ~ `
+</pre></div>
+`;
+}
+
+/* Converts a markdown file to a tiddler 
+ * f is the filename */
 string convertTiddler(string f) {
 	string content = readText(f);
 	string filename = stripExtension(baseName(f));
@@ -133,6 +174,82 @@ string convertTiddler(string f) {
 ` ~ content.toHtml.deangle ~ `
 </pre></div>
 `;
+}
+
+/* Find all open tasks in a markdown file 
+ * Return a markdown list holding them
+ * f is the filename */
+string openTasks(string f) {
+	string content = "\n" ~ readText(f);
+	string result;
+	
+	void aux(string content) {
+		if (content.length == 0) {
+			return;
+		}
+		auto ind = content.indexOf("\n- [ ] ");
+		if (ind > 0) {
+			result ~= firstTask(content[ind+1..$])[0];
+			return aux(content[ind+1..$]);
+		} else {
+			return;
+		}
+	}
+	
+	aux(content);
+	writeln(result);
+	return result;
+}
+
+/* Return the first task in this string */
+string[2] firstTask(string s) {
+	string result;
+	string after;
+	void otherLines(string str) {
+		if (str.length == 0) {
+			writeln("== 0: ", result);
+			return;
+		}
+		
+		// If a new list item, done
+		if (str.startsWith("- ")) {
+			after = str;
+			writeln("- :", result);
+			return;
+		}
+		// If a blank line not ending in two spaces, done
+		else if ((str == "\n") | (str == " \n")) {
+			writeln("blank line:", result);
+			after = str;
+			return;
+		}
+		auto ind1 = str.indexOf("\n");
+		// This line is part of the first task if we're here
+		// If this is the last line in the file, done
+		if (ind1 < 0) {
+			after = "";
+			result ~= str;
+			writeln("< 0: ", result);
+			return;
+		// If we're here, keep going
+		}	else {
+			result ~= str[0..ind1] ~ "\n";
+			writeln("keep going: ", str[0..ind1]);
+			return otherLines(str[ind1+1..$]);
+		}
+	}
+	
+	/* When we're here, we are at the start of the first task. */
+	auto endLine = s.indexOf("\n");
+	// If this is the end of the file, we're done
+	if (endLine < 0) {
+		return [s, ""];
+	} else {
+	// Otherwise save this line and check the next lines
+		result ~= s[0..endLine] ~ "\n";
+		otherLines(s[endLine+1..$]);
+		return [result, s[endLine+1..$]];
+	}
 }
 
 string toHtml(string md) {
@@ -150,6 +267,7 @@ string deangle(string s) {
 	return s.replace("<", "&lt;").replace(">", "&gt;");
 }
 
+/* Returns all the tiddly blocks in a markdown file as an array */
 string[] tiddlyBlocks(string s, Regex!char re) {
   string[] result;
   foreach(m; s.matchAll(re)) {
@@ -158,6 +276,7 @@ string[] tiddlyBlocks(string s, Regex!char re) {
   return result;
 }
 
+/* Converts an array of tiddly blocks to tiddlers */
 string[] convertTiddlers(string[] tiddlers) {
 	string aux(string s, string result="<div") {
 		long ind = s.indexOf("\n");
