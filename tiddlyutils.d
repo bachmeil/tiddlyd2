@@ -180,36 +180,30 @@ string convertTiddler(string f) {
  * Return a markdown list holding them
  * f is the filename */
 string openTasks(string f) {
-	string content = "\n" ~ readText(f);
-	string result;
+	string content = readText(f);
 	
-	void aux(string content) {
-		if (content.length == 0) {
-			return;
-		}
-		auto ind = content.indexOf("\n- [ ] ");
-		if (ind > 0) {
-			writeln("------------------->>>");
-			writeln("content: ", content[ind+1..$], "\n<<<<<<-----------");
-			string ft = firstTask(content[ind..$]);
-			writeln("first task: ", ft);
-			result ~= ft;
-			auto nextInd = content.indexOf("\n- [ ] ", 5);
-			if (nextInd < 0) {
-				return;
+	string result;
+	bool insideTask = false;
+	foreach(line; content.split("\n")) {
+		if (insideTask) {
+			/* No longer inside a task AND don't add to the list if
+			 * blank line not indented four spaces or a new list item that's
+			 * not a task */
+			if (((line.strip == "") & (!line.startsWith("    "))) | (line.startsWith("- ") & !line.startsWith("- [ ] "))) {
+				insideTask = false;
 			} else {
-				return aux(content[nextInd+1..$]);
+				result ~= line ~ "\n";
 			}
 		} else {
-			return;
+			if (line.startsWith("- [ ] ")) {
+				result ~= line ~ "\n";
+				insideTask = true;
+			}
 		}
 	}
-	
-	aux(content);
-	writeln(result);
 	return result;
 }
-
+	
 /* Return the first task in this string */
 string firstTask(string s) {
 	string result;
