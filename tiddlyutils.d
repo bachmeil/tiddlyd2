@@ -16,6 +16,12 @@
  *   that is most of the size of the file. Creates file2 and core.html. file2 cannot
  *   be the same as file1. If not specified, file2 is set to file1_stripped.html.
  * tiddlyutils update file1 will update core, top, bottom, and plugins. usercontent.html is not affected.
+ * 
+ * Option 'multi' combines multiple queries into one TW file. The second
+ * argument says what to do. action:dir{pattern} for actions tasks or blocks.
+ * filter:f{t} to include a list of tiddlers that come up for that filter.
+ * f is the filter and t is the title to give it. Example:
+ * filter:[type[review]]{Review blocks}
  */
 import std.algorithm, std.array, std.conv, std.datetime, std.exception;
 import std.file, std.path;
