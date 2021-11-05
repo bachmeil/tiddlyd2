@@ -87,6 +87,18 @@ void main(string[] args) {
 			~ createTiddler(mdfile, "Open Tasks") ~
 			`</div>`));
 		writeln("Created file opentasks.html");
+		
+
+	} else if (args[1] == "multi") {
+		DirInfo[] actions = args[2].split(",").map!(a => DirInfo(a)).array;
+		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
+		string templateFile = setExtension(expandTilde(args[3]), "html");
+		std.file.write("twmulti.html", readText(templateFile).replace(
+			`<div id="storeArea" style="display:none;"></div>`,
+			`<div id="storeArea" style="display:none;">`
+			~ tiddlers ~
+			`</div>`));
+		writeln("Created file twmulti.html");
 
 	} else if (args[1] == "strip") {
 		enforce(!exists("usercontent.html"), "Cannot run tiddlyutils strip if usercontent.html already exists. Rename that file or delete it and rerun this command.");			
@@ -176,6 +188,69 @@ string convertTiddler(string f) {
 `;
 }
 
+/* For processing a directory, with an optional pattern */
+struct DirInfo {
+	string action;
+	string dir;
+	string pattern = "*";
+	
+	this(string s) {
+		auto ind1 = s.indexOf(":");
+		enforce(ind1 > 0, "In " ~ s ~ ": You have to specify the action on a directory in the form action:dir");
+		action = s[0..ind1].strip;
+		auto ind2 = s.indexOf("{", ind1);
+		if (ind2 > 0) {
+			auto ind3 = s.indexOf("}", ind2);
+			enforce(ind3 > 0, "Missing closing } in " ~ s);
+			dir = s[ind1+1..ind2].strip;
+			pattern = s[ind2+1..ind3].strip;
+		} else {
+			dir = s[ind1+1..$].strip;
+		}
+	}
+	
+	string asTiddler() {
+		if (action == "tasks") {
+			// One tiddler holding all tasks
+			return createTiddler(processTasks(), "Open tasks in " ~ dir);
+		} else if (action == "blocks") {
+			// Many tiddlers
+			return processBlocks();
+		} else if (action == "filter") {
+			return createTiddler(`<<list-links filter:'` ~ dir ~ `'>>`, pattern);
+		} else {
+			return "Action " ~ action ~ " not supported";
+		}
+	}
+	
+	string processTasks() {
+		string mdfile;
+		string[] files;
+		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
+			if (f.isFile) {
+				string tasks = openTasks(f);
+				if (tasks.length > 0) {
+					mdfile ~= "# " ~ stripExtension(baseName(f)) ~ "\n\n" ~ tasks ~ "\n\n";
+				}
+			}
+		}
+		return mdfile;
+	}
+	
+	string processBlocks() {
+		auto re = regex(`<pre><tiddly>.*?</tiddly></pre>`, "s");
+		string tiddlers;
+		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
+			if (f.isFile) {
+				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re))) {
+					tiddlers ~= tmp ~ "\n";
+				}
+			}
+		}
+		return tiddlers;
+	}
+}
+
 /* Find all open tasks in a markdown file 
  * Return a markdown list holding them
  * f is the filename */
@@ -202,52 +277,6 @@ string openTasks(string f) {
 		}
 	}
 	return result;
-}
-	
-/* Return the first task in this string */
-string firstTask(string s) {
-	string result;
-	void otherLines(string str) {
-		if (str.length == 0) {
-			return;
-		}
-		
-		// If a new list item, done
-		if (str.startsWith("- ")) {
-			writeln("--1--");
-			return;
-		}
-		// If a blank line not ending in two spaces, done
-		else if ((str == "") | (str == " ") | (str == "\n") | (str == " \n")) {
-			writeln("--2--");
-			return;
-		}
-		auto ind1 = str.indexOf("\n");
-		// This line is part of the first task if we're here
-		// If this is the last line in the file, done
-		if (ind1 < 0) {
-			writeln("--3--");
-			result ~= str;
-			return;
-		// If we're here, keep going
-		}	else {
-			writeln("--4--  ", str[0..ind1]);
-			result ~= str[0..ind1] ~ "\n";
-			return otherLines(str[ind1+1..$]);
-		}
-	}
-	
-	/* When we're here, we are at the start of the first task. */
-	auto endLine = s.indexOf("\n");
-	// If this is the end of the file, we're done
-	if (endLine < 0) {
-		return s;
-	} else {
-	// Otherwise save this line and check the next lines
-		result ~= s[0..endLine] ~ "\n";
-		otherLines(s[endLine+1..$]);
-		return result;
-	}
 }
 
 string toHtml(string md) {
