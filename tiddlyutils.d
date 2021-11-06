@@ -24,11 +24,26 @@
  * filter:[type[review]]{Review blocks}
  */
 import std.algorithm, std.array, std.conv, std.datetime, std.exception;
-import std.file, std.path;
+import std.file, std.getopt, std.path;
 import std.process, std.regex, std.stdio, std.string;
 
+string[] tasks;
+string[] blocks;
+string[] filters;
+string[] markdown;
+string source = "empty52.html";
+string type;
+
 void main(string[] args) {
-	enforce(args.length > 1, "You have to supply arguments to tiddlyutils");
+	getopt(args,
+		"tasks|t", &tasks,
+		"blocks|b", &blocks,
+		"filter|f", &filters,
+		"markdown|m", &markdown,
+		"source|s", &source,
+		"type", &type);
+
+	args = ["", "", "", ""];
 	
 	if ( (args[1] == "md") | (args[1] == "deepmd") ) {
 		
@@ -93,6 +108,25 @@ void main(string[] args) {
 			~ createTiddler(mdfile, "Open Tasks") ~
 			`</div>`));
 		writeln("Created file opentasks.html");
+		
+	} else if (type == "multi") {
+		DirInfo[] actions;
+		foreach(dir; blocks) {
+			actions ~= DirInfo("blocks", dir);
+		}
+		foreach(dir; tasks) {
+			actions ~= DirInfo("tasks", dir);
+		}
+		foreach(f; filters) {
+			actions ~= DirInfo("filter", f);
+		}
+		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
+		std.file.write("twmulti.html", readText(source).replace(
+			`<div id="storeArea" style="display:none;"></div>`,
+			`<div id="storeArea" style="display:none;">`
+			~ tiddlers ~
+			`</div>`));
+		writeln("Created file twmulti.html");
 		
 
 	} else if (args[1] == "multi") {
@@ -214,6 +248,18 @@ struct DirInfo {
 			dir = s[ind1+1..$].strip;
 		}
 	}
+	
+	this(string _action, string _dir) {
+		action = _action;
+		string[] ds = _dir.split("{");
+		if (ds.length == 1) {
+			dir = _dir;
+			pattern = "*";
+		} else {
+			dir = ds[0];
+			pattern = ds[1][0..$-1];
+		}
+	}		
 	
 	string asTiddler() {
 		if (action == "tasks") {
