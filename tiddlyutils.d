@@ -26,126 +26,40 @@
 import std.algorithm, std.array, std.conv, std.datetime, std.exception;
 import std.file, std.getopt, std.path;
 import std.process, std.regex, std.stdio, std.string;
+alias _strip = std.string.strip;
 
 string[] tasks;
 string[] blocks;
 string[] filters;
+string[] singles;
 string[] markdown;
-string source = "empty52.html";
+string input = "empty52.html";
+string output = "twsite.html";
+string path = "";
 string type;
+bool strip = false;
+bool update = false;
 
 void main(string[] args) {
 	getopt(args,
 		"tasks|t", &tasks,
 		"blocks|b", &blocks,
 		"filter|f", &filters,
-		"markdown|m", &markdown,
-		"source|s", &source,
+		"input|i", &input,
+		"single|s", &singles,
+		"path|p", &path,
+		"output|o", &output,
+		"strip", &strip,
+		"update", &update,
 		"type", &type);
-
-	args = ["", "", "", ""];
 	
-	if ( (args[1] == "md") | (args[1] == "deepmd") ) {
-		
-		// args[2]: dir args[3]: template
-		string tiddlers;
-		if (args[1] == "md") {
-			foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow).array.sort!"a > b") {
-				if (f.isFile & (extension(f) == ".md")) {
-					tiddlers ~= convertTiddler(f);
-				}
-			}
-		} else {
-			foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.depth).array.sort!"a > b") {
-				if (f.isFile & (extension(f) == ".md")) {
-					tiddlers ~= convertTiddler(f);
-				}
-			}
-		}
-		string templateFile = setExtension(expandTilde(args[3]), "html");
-		std.file.write("twsite.html", readText(templateFile).replace(
-			`<div id="storeArea" style="display:none;"></div>`,
-			`<div id="storeArea" style="display:none;">`
-			~ tiddlers
-			~ `</div>`));
-		writeln("Created file twsite.html");
+	input = expandTilde(setExtension(input, "html"));
+	output = expandTilde(setExtension(output, "html"));
 
-
-	} else if (args[1] == "blocks") {
-	  auto re = regex(`<pre><tiddly>.*?</tiddly></pre>`, "s");
-		string tiddlers;
-		foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow)) {
-			if (f.isFile) {
-				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re))) {
-					tiddlers ~= tmp ~ "\n";
-				}
-			}
-		}
-		string templateFile = setExtension(expandTilde(args[3]), "html");
-		std.file.write("obsidiantiddly.html", readText(templateFile).replace(
-			`<div id="storeArea" style="display:none;"></div>`,
-			`<div id="storeArea" style="display:none;">`
-			~ tiddlers
-			~ `</div>`));
-		writeln("Created file obsidiantiddly.html");
-		
-
-	} else if (args[1] == "tasks") {
-		string mdfile;
-		foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow).array.sort!"a > b") {
-			writeln(f);
-			if (f.isFile) {
-				string tasks = openTasks(f);
-				if (tasks.length > 0) {
-					mdfile ~= "# " ~ stripExtension(baseName(f)) ~ "\n\n" ~ tasks ~ "\n\n";
-				}
-			}
-		}
-		string templateFile = setExtension(expandTilde(args[3]), "html");
-		std.file.write("opentasks.html", readText(templateFile).replace(
-			`<div id="storeArea" style="display:none;"></div>`,
-			`<div id="storeArea" style="display:none;">`
-			~ createTiddler(mdfile, "Open Tasks") ~
-			`</div>`));
-		writeln("Created file opentasks.html");
-		
-	} else if (type == "multi") {
-		DirInfo[] actions;
-		foreach(dir; blocks) {
-			actions ~= DirInfo("blocks", dir);
-		}
-		foreach(dir; tasks) {
-			actions ~= DirInfo("tasks", dir);
-		}
-		foreach(f; filters) {
-			actions ~= DirInfo("filter", f);
-		}
-		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
-		std.file.write("twmulti.html", readText(source).replace(
-			`<div id="storeArea" style="display:none;"></div>`,
-			`<div id="storeArea" style="display:none;">`
-			~ tiddlers ~
-			`</div>`));
-		writeln("Created file twmulti.html");
-		
-
-	} else if (args[1] == "multi") {
-		DirInfo[] actions = args[2].split(",").map!(a => DirInfo(a)).array;
-		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
-		string templateFile = setExtension(expandTilde(args[3]), "html");
-		std.file.write("twmulti.html", readText(templateFile).replace(
-			`<div id="storeArea" style="display:none;"></div>`,
-			`<div id="storeArea" style="display:none;">`
-			~ tiddlers ~
-			`</div>`));
-		writeln("Created file twmulti.html");
-
-	} else if (args[1] == "strip") {
+	if (strip) {
 		enforce(!exists("usercontent.html"), "Cannot run tiddlyutils strip if usercontent.html already exists. Rename that file or delete it and rerun this command.");			
-		if (args.length > 3) {
-			enforce(setExtension(args[3].strip, "html") != setExtension(args[2].strip, "html"));
-		}
-		string f = readText(setExtension(expandTilde(args[2]), "html"));
+		enforce(output != input, "output and input cannot be the same file");
+		string f = readText(input);
 		string txt1 = `<script class="tiddlywiki-tiddler-store" type="application/json">[
 {`;
 		string txt2 = `}
@@ -155,7 +69,7 @@ void main(string[] args) {
 		std.file.write("top.html", tid1[0] ~ txt1);
 		std.file.write("bottom.html", txt2 ~ tid2[1]);
 		
-		string currentContent = tid2[0].strip;
+		string currentContent = std.string.strip(tid2[0]);
 		string other;
 		string core;
 		foreach(line; currentContent.split("\n")) {
@@ -178,9 +92,8 @@ void main(string[] args) {
 		// Core app and plugins, not user data, very large
 		std.file.write("core.html", core);
 
-
-	} else if (args[1] == "update") {
-		string f = readText(setExtension(expandTilde(args[2]), "html"));
+	} else if (update) {
+		string f = readText(input);
 		string txt1 = `<script class="tiddlywiki-tiddler-store" type="application/json">[
 {`;
 		string txt2 = `}
@@ -190,7 +103,7 @@ void main(string[] args) {
 		std.file.write("top.html", tid1[0] ~ txt1);
 		std.file.write("bottom.html", txt2 ~ tid2[1]);
 		
-		string currentContent = tid2[0].strip;
+		string currentContent = std.string.strip(tid2[0]);
 		string core;
 		// Ignore the user's data
 		// For updating core and plugins
@@ -202,7 +115,114 @@ void main(string[] args) {
 			}
 		}
 		std.file.write("core.html", core);
+	} else {
+		DirInfo[] actions;
+		foreach(dir; blocks) {
+			actions ~= DirInfo("blocks", dir);
+		}
+		foreach(dir; tasks) {
+			actions ~= DirInfo("tasks", dir);
+		}
+		foreach(f; filters) {
+			actions ~= DirInfo("filter", f);
+		}
+		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
+		foreach(f; singles) {
+			tiddlers ~= convertTiddler(expandTilde(path ~ "/" ~ f));
+		}
+		foreach(dir; markdown) {
+			foreach(f; std.file.dirEntries(dir, "*.md", SpanMode.shallow).array.sort!"a > b") {
+				tiddlers ~= convertTiddler(f);
+			}
+		}
+		std.file.write(output, readText(input).replace(
+			`<div id="storeArea" style="display:none;"></div>`,
+			`<div id="storeArea" style="display:none;">`
+			~ tiddlers ~
+			`</div>`));
+		writeln("Created file " ~ output);
 	}
+		
+	//~ args = ["", "", "", ""];
+	
+	//~ if ( (args[1] == "md") | (args[1] == "deepmd") ) {
+		
+		//~ // args[2]: dir args[3]: template
+		//~ string tiddlers;
+		//~ if (args[1] == "md") {
+			//~ foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow).array.sort!"a > b") {
+				//~ if (f.isFile & (extension(f) == ".md")) {
+					//~ tiddlers ~= convertTiddler(f);
+				//~ }
+			//~ }
+		//~ } else {
+			//~ foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.depth).array.sort!"a > b") {
+				//~ if (f.isFile & (extension(f) == ".md")) {
+					//~ tiddlers ~= convertTiddler(f);
+				//~ }
+			//~ }
+		//~ }
+		//~ string templateFile = setExtension(expandTilde(args[3]), "html");
+		//~ std.file.write("twsite.html", readText(templateFile).replace(
+			//~ `<div id="storeArea" style="display:none;"></div>`,
+			//~ `<div id="storeArea" style="display:none;">`
+			//~ ~ tiddlers
+			//~ ~ `</div>`));
+		//~ writeln("Created file twsite.html");
+
+
+	//~ } else if (args[1] == "blocks") {
+	  //~ auto re = regex(`<pre><tiddly>.*?</tiddly></pre>`, "s");
+		//~ string tiddlers;
+		//~ foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow)) {
+			//~ if (f.isFile) {
+				//~ foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re))) {
+					//~ tiddlers ~= tmp ~ "\n";
+				//~ }
+			//~ }
+		//~ }
+		//~ string templateFile = setExtension(expandTilde(args[3]), "html");
+		//~ std.file.write("obsidiantiddly.html", readText(templateFile).replace(
+			//~ `<div id="storeArea" style="display:none;"></div>`,
+			//~ `<div id="storeArea" style="display:none;">`
+			//~ ~ tiddlers
+			//~ ~ `</div>`));
+		//~ writeln("Created file obsidiantiddly.html");
+		
+
+	//~ } else if (args[1] == "tasks") {
+		//~ string mdfile;
+		//~ foreach(f; std.file.dirEntries(expandTilde(args[2]), SpanMode.shallow).array.sort!"a > b") {
+			//~ writeln(f);
+			//~ if (f.isFile) {
+				//~ string tasks = openTasks(f);
+				//~ if (tasks.length > 0) {
+					//~ mdfile ~= "# " ~ stripExtension(baseName(f)) ~ "\n\n" ~ tasks ~ "\n\n";
+				//~ }
+			//~ }
+		//~ }
+		//~ string templateFile = setExtension(expandTilde(args[3]), "html");
+		//~ std.file.write("opentasks.html", readText(templateFile).replace(
+			//~ `<div id="storeArea" style="display:none;"></div>`,
+			//~ `<div id="storeArea" style="display:none;">`
+			//~ ~ createTiddler(mdfile, "Open Tasks") ~
+			//~ `</div>`));
+		//~ writeln("Created file opentasks.html");
+		
+	//~ } else if (type == "multi") {
+		
+
+	//~ } else if (args[1] == "multi") {
+		//~ DirInfo[] actions = args[2].split(",").map!(a => DirInfo(a)).array;
+		//~ string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
+		//~ string templateFile = setExtension(expandTilde(args[3]), "html");
+		//~ std.file.write("twmulti.html", readText(templateFile).replace(
+			//~ `<div id="storeArea" style="display:none;"></div>`,
+			//~ `<div id="storeArea" style="display:none;">`
+			//~ ~ tiddlers ~
+			//~ `</div>`));
+		//~ writeln("Created file twmulti.html");
+
 }
 
 /* Create a tiddler out of a string */
@@ -237,15 +257,15 @@ struct DirInfo {
 	this(string s) {
 		auto ind1 = s.indexOf(":");
 		enforce(ind1 > 0, "In " ~ s ~ ": You have to specify the action on a directory in the form action:dir");
-		action = s[0..ind1].strip;
+		action = s[0..ind1]._strip;
 		auto ind2 = s.indexOf("{", ind1);
 		if (ind2 > 0) {
 			auto ind3 = s.indexOf("}", ind2);
 			enforce(ind3 > 0, "Missing closing } in " ~ s);
-			dir = s[ind1+1..ind2].strip;
-			pattern = s[ind2+1..ind3].strip;
+			dir = s[ind1+1..ind2]._strip;
+			pattern = s[ind2+1..ind3]._strip;
 		} else {
-			dir = s[ind1+1..$].strip;
+			dir = s[ind1+1..$]._strip;
 		}
 	}
 	
@@ -316,7 +336,7 @@ string openTasks(string f) {
 			/* No longer inside a task AND don't add to the list if
 			 * blank line not indented four spaces or a new list item that's
 			 * not a task */
-			if (((line.strip == "") & (!line.startsWith("    "))) | (line.startsWith("- ") & !line.startsWith("- [ ] "))) {
+			if (((line._strip == "") & (!line.startsWith("    "))) | (line.startsWith("- ") & !line.startsWith("- [ ] "))) {
 				insideTask = false;
 			} else {
 				result ~= line ~ "\n";
@@ -365,9 +385,9 @@ string[] convertTiddlers(string[] tiddlers) {
 			return result ~ "><pre>" ~ content.toHtml().deangle ~ "</pre></div>";
 		} else {
 			string[] data = line.split(":");
-			string attr = data[0].strip ~ `="` ~ data[1].strip ~ `"`;
-			if (data[0].strip == "created") {
-				attr ~= ` modified="` ~ data[1].strip ~ `"`;
+			string attr = data[0]._strip ~ `="` ~ data[1]._strip ~ `"`;
+			if (data[0]._strip == "created") {
+				attr ~= ` modified="` ~ data[1]._strip ~ `"`;
 			}
 			return aux(s[ind+1..$], result ~ " " ~ attr);
 		}
