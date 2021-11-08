@@ -35,6 +35,7 @@ string[] singles;
 string[] markdown;
 string input = "empty52.html";
 string output = "twsite.html";
+string tiddlers;
 string path = "";
 string type;
 bool strip = false;
@@ -49,6 +50,7 @@ void main(string[] args) {
 		"single|s", &singles,
 		"path|p", &path,
 		"output|o", &output,
+		"tiddlers", &tiddlers,
 		"strip", &strip,
 		"update", &update,
 		"type", &type);
@@ -128,18 +130,25 @@ void main(string[] args) {
 		}
 		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
-			tiddlers ~= convertTiddler(expandTilde(path ~ "/" ~ f));
+			if (extension(f) == ".html") {
+				tiddlers ~= readText(f);
+			} else {
+				tiddlers ~= convertTiddler(expandTilde(path ~ "/" ~ f));
+			}
 		}
 		foreach(dir; markdown) {
 			foreach(f; std.file.dirEntries(dir, "*.md", SpanMode.shallow).array.sort!"a > b") {
 				tiddlers ~= convertTiddler(f);
 			}
 		}
-		std.file.write(output, readText(input).replace(
-			`<div id="storeArea" style="display:none;"></div>`,
-			`<div id="storeArea" style="display:none;">`
-			~ tiddlers ~
-			`</div>`));
+		if (tiddlers.length > 0) {
+			std.file.write(setExtension(expandTilde(tiddlers), "html"), tiddlers);
+		} else {
+			std.file.write(output, readText(input).replace(
+				`<div id="storeArea" style="display:none;"></div>`,
+				`<div id="storeArea" style="display:none;">`
+				~ tiddlers ~ `</div>`));
+		}
 		writeln("Created file " ~ output);
 	}
 }
