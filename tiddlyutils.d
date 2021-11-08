@@ -35,7 +35,7 @@ string[] singles;
 string[] markdown;
 string input = "empty52.html";
 string output = "twsite.html";
-string tiddlers;
+string tiddlersFile;
 string path = "";
 string type;
 bool strip = false;
@@ -50,7 +50,7 @@ void main(string[] args) {
 		"single|s", &singles,
 		"path|p", &path,
 		"output|o", &output,
-		"tiddlers", &tiddlers,
+		"tiddlers", &tiddlersFile,
 		"strip", &strip,
 		"update", &update,
 		"type", &type);
@@ -141,15 +141,16 @@ void main(string[] args) {
 				tiddlers ~= convertTiddler(f);
 			}
 		}
-		if (tiddlers.length > 0) {
-			std.file.write(setExtension(expandTilde(tiddlers), "html"), tiddlers);
+		if (tiddlersFile.length > 0) {
+			std.file.write(setExtension(expandTilde(tiddlersFile), "html"), tiddlers);
+			writeln("Created tiddlers file at " ~ tiddlersFile);
 		} else {
 			std.file.write(output, readText(input).replace(
 				`<div id="storeArea" style="display:none;"></div>`,
 				`<div id="storeArea" style="display:none;">`
 				~ tiddlers ~ `</div>`));
+			writeln("Created file " ~ output);
 		}
-		writeln("Created file " ~ output);
 	}
 }
 
