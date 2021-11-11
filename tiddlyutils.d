@@ -182,6 +182,8 @@ struct DirInfo {
 	string action;
 	string dir;
 	string pattern = "*";
+	bool qualified = false;
+	string qualifier;
 	
 	this(string s) {
 		auto ind1 = s.indexOf(":");
@@ -202,13 +204,32 @@ struct DirInfo {
 		action = _action;
 		string[] ds = _dir.split("{");
 		if (ds.length == 1) {
-			dir = _dir;
-			pattern = "*";
+			string[] ds2 = _dir.split("@");
+			// No qualifier and no pattern
+			if (ds2.length == 1) {
+				dir = _dir;
+				pattern = "*";
+			} else {
+				// Qualifier but no pattern
+				dir = ds2[0];
+				qualified = true;
+				qualifier = "@" ~ ds2[1];
+			}
 		} else {
-			dir = ds[0];
-			pattern = ds[1][0..$-1];
+			string[] ds2 = ds[0].split("@");
+			if (ds2.length == 1) {
+				// Pattern but no qualifier
+				dir = ds[0];
+				pattern = ds[1][0..$-1];
+			} else {
+				// Pattern and qualifier
+				dir = ds2[0];
+				qualified = true;
+				qualifier = "@" ~ ds2[1];
+				pattern = ds[1][0..$-1];
+			}
 		}
-	}		
+	}
 	
 	string asTiddler() {
 		if (action == "tasks") {
@@ -224,12 +245,18 @@ struct DirInfo {
 		}
 	}
 	
+	/* If dir ends with @foo, only capture those tasks */
 	string processTasks() {
 		string mdfile;
 		string[] files;
 		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
 			if (f.isFile) {
-				string tasks = openTasks(f);
+				string tasks;
+				if (qualified) {
+					tasks = openTasks(f, qualifier);
+				} else {
+					tasks = openTasks(f);
+				}
 				if (tasks.length > 0) {
 					mdfile ~= "# " ~ stripExtension(baseName(f)) ~ "\n\n" ~ tasks ~ "\n\n";
 				}
@@ -255,30 +282,61 @@ struct DirInfo {
 /* Find all open tasks in a markdown file 
  * Return a markdown list holding them
  * f is the filename */
-string openTasks(string f) {
+string openTasks(string f, string qualifier="") {
 	string content = readText(f);
 	
 	string result;
 	bool insideTask = false;
+	string thisTask;
 	foreach(line; content.split("\n")) {
 		if (insideTask) {
-			/* No longer inside a task AND don't add to the list if
-			 * blank line not indented four spaces or a new list item that's
-			 * not a task */
-			if (((line._strip == "") & (!line.startsWith("    "))) | (line.startsWith("- ") & !line.startsWith("- [ ] "))) {
-				insideTask = false;
-			} else {
-				result ~= line ~ "\n";
+
+			if (line.newTask) {
+				// Save task
+				if (qualifier == "") {
+					result ~= thisTask;
+				// Save task
+				} else if ( (qualifier != "") & (thisTask.indexOf(qualifier) > 0) ) {
+					result ~= thisTask;
+				// Ignore task
+				}
+				thisTask = "";
 			}
-		} else {
+			
+			if (line.leftTask) {
+				insideTask = false;
+				result ~= thisTask;
+				thisTask = "";
+			}
+		}
+		
+		// Yes, I know how to use else
+		if (!insideTask) {
 			if (line.startsWith("- [ ] ")) {
-				result ~= line ~ "\n";
+				writeln(line);
+				thisTask = line ~ "\n";
 				insideTask = true;
 			}
 		}
 	}
 	return result;
 }
+
+bool blankLine(string line) {
+	return (line._strip == "") & (!line.startsWith("  "));
+}
+
+bool newBullet(string line) {
+	return line.startsWith("- ");
+}
+
+bool newTask (string line) {
+	return line.startsWith("- [ ] ");
+}
+
+bool leftTask(string line) {
+	return blankLine(line) | (newBullet(line) & !newTask(line));
+}	
 
 string toHtml(string md) {
 	string cmd = "echo " ~ md.sq ~ " | pandoc -f markdown-smart+task_lists -t html";
