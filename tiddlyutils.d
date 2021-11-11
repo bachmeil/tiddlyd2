@@ -48,6 +48,7 @@ void main(string[] args) {
 		"filter|f", &filters,
 		"input|i", &input,
 		"single|s", &singles,
+		"markdown|m", &markdown,
 		"path|p", &path,
 		"output|o", &output,
 		"tiddlers", &tiddlersFile,

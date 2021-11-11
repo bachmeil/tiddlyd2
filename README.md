@@ -66,6 +66,7 @@ That gives you one tiddler with next actions for all work projects, another with
 	![Picture of save button](./save-tw.png)
 	
 - `--single -s`: The given filename will be treated as a file of tiddlers and inserted as is if it has extension html. If it has extension md, it will be converted to a tiddler.
+- `--markdown -m`: Compile all of the markdown files in the given directory into individual tiddlers. The title is the name of the file after stripping the extension.
 - `--path -p`: If provided, is added as the path to all single files. This is convenient when adding several individual files.
 - `--output -o`: If provided, is the name of the output file, potentially with a full path. If not provided, creates twsite.html in the current directory.
 - `--tiddlers`: If provided, is used as the name of the output file, but it only contains the tiddlers, not a full TiddlyWiki. Supports a workflow where the same tiddlers enter into multiple wikis, or where it's more convenient to construct one wiki in multiple parts. The output file is then included in a different wiki using option `--single` or `-s`.
