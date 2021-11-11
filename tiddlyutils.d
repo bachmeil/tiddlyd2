@@ -234,7 +234,7 @@ struct DirInfo {
 	string asTiddler() {
 		if (action == "tasks") {
 			// One tiddler holding all tasks
-			return createTiddler(processTasks(), "Open tasks in " ~ dir);
+			return createTiddler(processTasks(), "Open " ~ qualifier ~ " tasks in " ~ dir);
 		} else if (action == "blocks") {
 			// Many tiddlers
 			return processBlocks();
@@ -283,43 +283,63 @@ struct DirInfo {
  * Return a markdown list holding them
  * f is the filename */
 string openTasks(string f, string qualifier="") {
+	writeln("Inside file: ", f);
+	writeln("-------------------------");
 	string content = readText(f);
 	
 	string result;
 	bool insideTask = false;
 	string thisTask;
-	foreach(line; content.split("\n")) {
+	foreach(ii, line; content.split("\n")) {
+		writeln(ii, " ", insideTask);
 		if (insideTask) {
-
 			if (line.newTask) {
-				// Save task
-				if (qualifier == "") {
+				if (thisTask.includesQualifier(qualifier)) {
+					writeln("+--------------+");
+					writeln("+ Contains qualifier " ~ qualifier);
+					writeln(thisTask);
+					writeln("----------------");
 					result ~= thisTask;
-				// Save task
-				} else if ( (qualifier != "") & (thisTask.indexOf(qualifier) > 0) ) {
-					result ~= thisTask;
-				// Ignore task
+					thisTask = line ~ "\n";
 				}
-				thisTask = "";
+				writeln(ii, " Resetting task, currently equal to ", thisTask);
+				thisTask = line ~ "\n";
 			}
 			
 			if (line.leftTask) {
+				if (thisTask.includesQualifier(qualifier)) {
+					writeln("+--------------+");
+					writeln("+ Contains qualifier " ~ qualifier);
+					writeln(thisTask);
+					writeln("----------------");
+					result ~= thisTask;
+				}
 				insideTask = false;
-				result ~= thisTask;
 				thisTask = "";
 			}
 		}
 		
-		// Yes, I know how to use else
+		// I know how to use else
 		if (!insideTask) {
 			if (line.startsWith("- [ ] ")) {
-				writeln(line);
 				thisTask = line ~ "\n";
 				insideTask = true;
 			}
 		}
 	}
 	return result;
+}
+
+/* Returns true if the task includes the qualifier OR if
+ * there is no qualifier */
+bool includesQualifier(string task, string qualifier) {
+	if (qualifier == "") {
+		return true;
+	} else if (task.indexOf(qualifier) > 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 bool blankLine(string line) {
