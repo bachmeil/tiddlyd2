@@ -63,7 +63,7 @@ That gives you one tiddler with next actions for all work projects, another with
 - `--filter -f`: Create a tiddler with links to all tiddlers that satisfy the given filter. Filter notation is that of TiddlyWiki.
 - `--input -i`: The name of the TiddlyWiki input file to use as a template to add the created tiddlers. If not provided, it uses empty52.html in the current directory. Requires TiddlyWiki version 5.2 or later. Can be [downloaded at this link](https://tiddlywiki.com/#GettingStarted). Any valid TiddlyWiki file will work as long as it is version 5.2 or later. You can make changes by loading the file in your browser, customizing, and saving. (Do not use "Save As". That will not work. You need to click this button:
 	
-	![save-tw.png]
+	![Picture of save button](./save-tw.png)
 	
 - `--single -s`: The given filename will be treated as a file of tiddlers and inserted as is if it has extension html. If it has extension md, it will be converted to a tiddler.
 - `--path -p`: If provided, is added as the path to all single files. This is convenient when adding several individual files.
