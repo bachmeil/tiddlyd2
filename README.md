@@ -72,3 +72,13 @@ That gives you one tiddler with next actions for all work projects, another with
 - `--tiddlers`: If provided, is used as the name of the output file, but it only contains the tiddlers, not a full TiddlyWiki. Supports a workflow where the same tiddlers enter into multiple wikis, or where it's more convenient to construct one wiki in multiple parts. The output file is then included in a different wiki using option `--single` or `-s`.
 - `--strip`: Not currently stable. Part of the server implementation.
 - `--update`: Not currently stable. Part of the server implementation.
+
+## Patterns
+
+You can specify a pattern to use to narrow the files processed in a particular directory. You do that by appending the pattern to the end of the directory name inside `{}`. For instance, to limit processing to markdown files starting with z, you'd use `/path/to/dir{z*.md}`. Any patterns [described here](https://dlang.org/phobos/std_path.html#globMatch) are valid. Note that no escaping of `{` or `}` is necessary.
+
+## Task qualifiers
+
+You can specify one or more qualifiers to limit the tasks you query. A task qualifier is arbitrary text that starts with `@` and doesn't include newline characters. You specify one or more task qualifiers by appending them to the directory name, but prior to a pattern, if a pattern is provided. The specification `-t /home/fred/dir@foo@bar@baz{z*.md}` processes all open tasks in markdown files starting with z inside /home/fred/dir. On the other hand, the specification `-t /home/fred/dir@foo@bar@baz` does not include a pattern, so tasks will be pulled from all files in that directory.
+
+Separate tiddlers are created for tasks qualified with @foo, @bar, and @baz. Since there can be multiple qualifiers applied to a given task, individual tasks may appear in more than one of the created tiddlers. 
