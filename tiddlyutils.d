@@ -53,8 +53,6 @@ void main(string[] args) {
 		"tiddlers", &tiddlersFile,
 		"strip", &strip,
 		"update", &update);
-		//~ "update", &update,
-		//~ "type", &type);
 	
 	input = expandTilde(setExtension(input, "html"));
 	output = expandTilde(setExtension(output, "html"));
