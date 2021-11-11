@@ -56,6 +56,24 @@ tiddlyutils --tasks '~/taskdir@next@future@maybe{*- work.md}' --single ~/foo.htm
 
 That gives you one tiddler with next actions for all work projects, another with future actions, and a third with someday/maybe items. Once you've reviewed all the tasks you've committed to doing, you can open up the someday/maybe items to see if you're ready to commit to doing or not doing some of them.
 
+## All options
+
+- `--tasks -t`: Compile all open tasks in the given directory into a tiddler. If multiple task qualifiers are provided, each gets its own tiddler.
+- `--blocks -b`: Pull all tiddly blocks out of the files in the given directory. Each becomes its own tiddler, with frontmatter converted to attributes.
+- `--filter -f`: Create a tiddler with links to all tiddlers that satisfy the given filter. Filter notation is that of TiddlyWiki.
+- `--input -i`: The name of the TiddlyWiki input file to use as a template to add the created tiddlers. If not provided, it uses empty52.html in the current directory. Requires TiddlyWiki version 5.2 or later. Can be [downloaded at this link](https://tiddlywiki.com/#GettingStarted). Any valid TiddlyWiki file will work as long as it is version 5.2 or later. You can make changes by loading the file in your browser, customizing, and saving. (Do not use "Save As". That will not work. You need to click this button:
+	
+	![save-tw.png]
+	
+- `--single -s`: The given filename will be treated as a file of tiddlers and inserted as is if it has extension html. If it has extension md, it will be converted to a tiddler.
+- `--path -p`: If provided, is added as the path to all single files. This is convenient when adding several individual files.
+- `--output -o`: If provided, is the name of the output file, potentially with a full path. If not provided, creates twsite.html in the current directory.
+- `--tiddlers`: If provided, is used as the name of the output file, but it only contains the tiddlers, not a full TiddlyWiki. Supports a workflow where the same tiddlers enter into multiple wikis, or where it's more convenient to construct one wiki in multiple parts. The output file is then included in a different wiki using option `--single` or `-s`.
+		"strip", &strip,
+		"update", &update,
+		"type", &type);
+
+
 ## Original (some parts may no longer be accurate)
 
 This is an in-progress project to provide tools for working with TiddlyWiki using D rather than Javascript. The current goals are:
