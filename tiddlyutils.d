@@ -128,6 +128,9 @@ void main(string[] args) {
 		foreach(f; filters) {
 			actions ~= DirInfo("filter", f);
 		}
+		foreach(a; actions) {
+			writeln(a.qualifiers);
+		}
 		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
 			if (extension(f) == ".html") {
@@ -183,49 +186,40 @@ struct DirInfo {
 	string dir;
 	string pattern = "*";
 	bool qualified = false;
-	string qualifier;
-	
-	this(string s) {
-		auto ind1 = s.indexOf(":");
-		enforce(ind1 > 0, "In " ~ s ~ ": You have to specify the action on a directory in the form action:dir");
-		action = s[0..ind1]._strip;
-		auto ind2 = s.indexOf("{", ind1);
-		if (ind2 > 0) {
-			auto ind3 = s.indexOf("}", ind2);
-			enforce(ind3 > 0, "Missing closing } in " ~ s);
-			dir = s[ind1+1..ind2]._strip;
-			pattern = s[ind2+1..ind3]._strip;
-		} else {
-			dir = s[ind1+1..$]._strip;
-		}
-	}
+	string[] qualifiers;
 	
 	this(string _action, string _dir) {
 		action = _action;
 		string[] ds = _dir.split("{");
+		// No pattern
 		if (ds.length == 1) {
 			string[] ds2 = _dir.split("@");
-			// No qualifier and no pattern
+			// No qualifiers
 			if (ds2.length == 1) {
 				dir = _dir;
 				pattern = "*";
+			// Qualifiers
 			} else {
-				// Qualifier but no pattern
 				dir = ds2[0];
 				qualified = true;
-				qualifier = "@" ~ ds2[1];
+				foreach(q; ds2[1..$]) {
+					qualifiers ~= "@" ~ q;
+				}
 			}
+		// Pattern
 		} else {
 			string[] ds2 = ds[0].split("@");
+			// No qualifiers
 			if (ds2.length == 1) {
-				// Pattern but no qualifier
 				dir = ds[0];
 				pattern = ds[1][0..$-1];
+			// Qualifiers
 			} else {
-				// Pattern and qualifier
 				dir = ds2[0];
 				qualified = true;
-				qualifier = "@" ~ ds2[1];
+				foreach(q; ds2[1..$]) {
+					qualifiers ~= "@" ~ q;
+				}
 				pattern = ds[1][0..$-1];
 			}
 		}
@@ -233,8 +227,15 @@ struct DirInfo {
 	
 	string asTiddler() {
 		if (action == "tasks") {
-			// One tiddler holding all tasks
-			return createTiddler(processTasks(), "Open " ~ qualifier ~ " tasks in " ~ dir);
+			string result;
+			if (qualified) {
+				foreach(q; qualifiers) {
+					result ~= createTiddler(processTasks(q), "Open " ~ q ~ " tasks in " ~ dir);
+				}
+			} else {
+				result = createTiddler(processTasks(), "Open tasks in " ~ dir);
+			}
+			return result;
 		} else if (action == "blocks") {
 			// Many tiddlers
 			return processBlocks();
@@ -246,7 +247,7 @@ struct DirInfo {
 	}
 	
 	/* If dir ends with @foo, only capture those tasks */
-	string processTasks() {
+	string processTasks(string qualifier="") {
 		string mdfile;
 		string[] files;
 		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
