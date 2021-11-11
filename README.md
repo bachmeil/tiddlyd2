@@ -61,7 +61,7 @@ That gives you one tiddler with next actions for all work projects, another with
 - `--tasks -t`: Compile all open tasks in the given directory into a tiddler. If multiple task qualifiers are provided, each gets its own tiddler.
 - `--blocks -b`: Pull all tiddly blocks out of the files in the given directory. Each becomes its own tiddler, with frontmatter converted to attributes.
 - `--filter -f`: Create a tiddler with links to all tiddlers that satisfy the given filter. Filter notation is that of TiddlyWiki.
-- `--input -i`: The name of the TiddlyWiki input file to use as a template to add the created tiddlers. If not provided, it uses empty52.html in the current directory. Requires TiddlyWiki version 5.2 or later. Can be [downloaded at this link](https://tiddlywiki.com/#GettingStarted). Any valid TiddlyWiki file will work as long as it is version 5.2 or later. You can make changes by loading the file in your browser, customizing, and saving. (Do not use "Save As". That will not work. You need to click this button:
+- `--input -i`: The name of the TiddlyWiki input file to use as a template to add the created tiddlers. If not provided, it uses empty52.html in the current directory. Requires TiddlyWiki version 5.2 or later. Can be [downloaded at this link](https://tiddlywiki.com/#GettingStarted). Any valid TiddlyWiki file will work as long as it is version 5.2 or later. You can make changes by loading the file in your browser, customizing, and saving. (Do not use "Save As". That will not work.) You need to click this button:
 	
 	![Picture of save button](./save-tw.png)
 	
