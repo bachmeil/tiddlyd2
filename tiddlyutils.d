@@ -1,27 +1,5 @@
 /*
- * Options
- * 
  * Assumes the template is TW 5.2 or later. Will not work with old TW versions.
- * 
- * tiddlyutils md dir file1 [file2]: Convert the directory dir to a TiddlyWiki
- *   site using file1 as the template. If given, outputs to file2, which may
- *   have a full path. If not, outputs to twsite.html in the current directory.
- *   This version does not convert subdirectories.
- * tiddlyutils deepmd dir file1 [file2]: Same as md, but also converts subdirectories.
- * tiddlyutils blocks dir file1 [file2]: Pulls tiddly blocks out of all
- *   markdown files in dir and converts each block to a tiddler. file1 is the
- *   template and file2, if supplied, is the output file. Outputs to twsite.html if
- *   file2 is not supplied.
- * tiddlyutils strip file1 [file2]: For the server, removes the core TW tiddler
- *   that is most of the size of the file. Creates file2 and core.html. file2 cannot
- *   be the same as file1. If not specified, file2 is set to file1_stripped.html.
- * tiddlyutils update file1 will update core, top, bottom, and plugins. usercontent.html is not affected.
- * 
- * Option 'multi' combines multiple queries into one TW file. The second
- * argument says what to do. action:dir{pattern} for actions tasks or blocks.
- * filter:f{t} to include a list of tiddlers that come up for that filter.
- * f is the filter and t is the title to give it. Example:
- * filter:[type[review]]{Review blocks}
  */
 import std.algorithm, std.array, std.conv, std.datetime, std.exception;
 import std.file, std.getopt, std.path;
@@ -328,6 +306,7 @@ string openTasks(string f, string qualifier="") {
 			}
 		}
 	}
+	result ~= thisTask;
 	return result;
 }
 
