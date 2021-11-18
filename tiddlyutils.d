@@ -118,10 +118,12 @@ void main(string[] args) {
 		}
 		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
-			if (extension(f) == ".html") {
-				tiddlers ~= readText(f);
-			} else {
-				tiddlers ~= convertTiddler(expandTilde(path ~ "/" ~ f));
+			if (exists(f)) {
+				if (extension(f) == ".html") {
+					tiddlers ~= readText(f);
+				} else {
+					tiddlers ~= convertTiddler(expandTilde(path ~ "/" ~ f));
+				}
 			}
 		}
 		foreach(dir; markdown) {
@@ -147,7 +149,7 @@ void main(string[] args) {
 /* Create a tiddler out of a string */
 string createTiddler(string s, string title) {
 	string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
-	return `<div created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ title ~ `">
+	return `<div gen="true" created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ title ~ `">
 <pre>
 ` ~ s.toHtml.deangle ~ `
 </pre></div>
@@ -160,7 +162,7 @@ string convertTiddler(string f) {
 	string content = readText(f);
 	string filename = stripExtension(baseName(f));
 	string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
-	return `<div created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ filename ~ `">
+	return `<div gen="true" created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ filename ~ `">
 <pre>
 ` ~ content.toHtml.deangle ~ `
 </pre></div>
