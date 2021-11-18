@@ -1,5 +1,7 @@
 /*
  * Assumes the template is TW 5.2 or later. Will not work with old TW versions.
+ * 
+ * --stdout: Output the tiddlers to the screen.
  */
 import std.algorithm, std.array, std.conv, std.datetime, std.exception;
 import std.file, std.getopt, std.path;
@@ -15,13 +17,13 @@ string input = "empty52.html";
 string output = "twsite.html";
 string tiddlersFile;
 string path = "";
-string type;
+bool stdout = false;
 bool strip = false;
 bool update = false;
 
 void main(string[] args) {
-	getopt(args,
-		"tasks|t", &tasks,
+	auto rslt = getopt(args,
+		"tasks|t", tasksDoc, &tasks,
 		"blocks|b", &blocks,
 		"filter|f", &filters,
 		"input|i", &input,
@@ -29,9 +31,13 @@ void main(string[] args) {
 		"markdown|m", &markdown,
 		"path|p", &path,
 		"output|o", &output,
-		"tiddlers", &tiddlersFile,
+		"tiddlers", tiddlersDoc, &tiddlersFile,
+		"stdout", stdoutDoc, &stdout,
 		"strip", &strip,
 		"update", &update);
+	if (rslt.helpWanted) {
+		defaultGetoptPrinter(programDoc, rslt.options);
+	}
 	
 	input = expandTilde(setExtension(input, "html"));
 	output = expandTilde(setExtension(output, "html"));
@@ -95,6 +101,7 @@ void main(string[] args) {
 			}
 		}
 		std.file.write("core.html", core);
+	// This is the interesting part of the code
 	} else {
 		DirInfo[] actions;
 		foreach(dir; blocks) {
@@ -125,6 +132,8 @@ void main(string[] args) {
 		if (tiddlersFile.length > 0) {
 			std.file.write(setExtension(expandTilde(tiddlersFile), "html"), tiddlers);
 			writeln("Created tiddlers file at " ~ tiddlersFile);
+		} else if (stdout) {
+			writeln(tiddlers);
 		} else {
 			std.file.write(output, readText(input).replace(
 				`<div id="storeArea" style="display:none;"></div>`,
@@ -386,3 +395,18 @@ string[] convertTiddlers(string[] tiddlers) {
 	}
 	return result;
 }
+
+/* Documentation */
+enum programDoc = `tiddlyutils is a program that converts the information in markdown files into a TiddlyWiki file that can be loaded in the browser and read, queried, and filtered.
+
+Directories of markdown files are specified as dir{pattern}, where {pattern} is an optional pattern. For example, ~/dir1{z*.md} specifies all markdown files that start with z in ~/dir1.
+
+Task qualifiers start with @, and go after the directory name.
+
+Usage: tu [options]
+
+where the options are
+`;
+enum tasksDoc = `Convert the open tasks from the markdown files in the specified directory into tiddlers`;
+enum tiddlersDoc = `Save the created tiddlers in the file you've specified`;
+enum stdoutDoc = `Print the created tiddlers to the screen`;
