@@ -65,9 +65,9 @@ void main(string[] args) {
 				core ~= line ~ "\n";
 			} else {
 				if (line.length > 50) {
-					writeln(line[0..50]);
+					//~ writeln(line[0..50]);
 				} else {
-					writeln(line);
+					//~ writeln(line);
 				}
 				other ~= line ~ "\n";
 			}
@@ -114,7 +114,7 @@ void main(string[] args) {
 			actions ~= DirInfo("filter", f);
 		}
 		foreach(a; actions) {
-			writeln(a.qualifiers);
+			//~ writeln(a.qualifiers);
 		}
 		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
@@ -133,7 +133,7 @@ void main(string[] args) {
 		}
 		if (tiddlersFile.length > 0) {
 			std.file.write(setExtension(expandTilde(tiddlersFile), "html"), tiddlers);
-			writeln("Created tiddlers file at " ~ tiddlersFile);
+			//~ writeln("Created tiddlers file at " ~ tiddlersFile);
 		} else if (stdout) {
 			writeln(tiddlers);
 		} else {
@@ -141,7 +141,7 @@ void main(string[] args) {
 				`<div id="storeArea" style="display:none;"></div>`,
 				`<div id="storeArea" style="display:none;">`
 				~ tiddlers ~ `</div>`));
-			writeln("Created file " ~ output);
+			//~ writeln("Created file " ~ output);
 		}
 	}
 }
@@ -273,35 +273,35 @@ struct DirInfo {
  * Return a markdown list holding them
  * f is the filename */
 string openTasks(string f, string qualifier="") {
-	writeln("Inside file: ", f);
-	writeln("-------------------------");
+	//~ writeln("Inside file: ", f);
+	//~ writeln("-------------------------");
 	string content = readText(f);
 	
 	string result;
 	bool insideTask = false;
 	string thisTask;
 	foreach(ii, line; content.split("\n")) {
-		writeln(ii, " ", insideTask);
+		//~ writeln(ii, " ", insideTask);
 		if (insideTask) {
 			if (line.newTask) {
 				if (thisTask.includesQualifier(qualifier)) {
-					writeln("+--------------+");
-					writeln("+ Contains qualifier " ~ qualifier);
-					writeln(thisTask);
-					writeln("----------------");
+					//~ writeln("+--------------+");
+					//~ writeln("+ Contains qualifier " ~ qualifier);
+					//~ writeln(thisTask);
+					//~ writeln("----------------");
 					result ~= thisTask;
 					thisTask = line ~ "\n";
 				}
-				writeln(ii, " Resetting task, currently equal to ", thisTask);
+				//~ writeln(ii, " Resetting task, currently equal to ", thisTask);
 				thisTask = line ~ "\n";
 			}
 			
 			if (line.leftTask) {
 				if (thisTask.includesQualifier(qualifier)) {
-					writeln("+--------------+");
-					writeln("+ Contains qualifier " ~ qualifier);
-					writeln(thisTask);
-					writeln("----------------");
+					//~ writeln("+--------------+");
+					//~ writeln("+ Contains qualifier " ~ qualifier);
+					//~ writeln(thisTask);
+					//~ writeln("----------------");
 					result ~= thisTask;
 				}
 				insideTask = false;
@@ -375,7 +375,7 @@ string[] tiddlyBlocks(string s, Regex!char re) {
 
 /* Converts an array of tiddly blocks to tiddlers */
 string[] convertTiddlers(string[] tiddlers) {
-	string aux(string s, string result="<div") {
+	string aux(string s, string result=`<div gen="true" `) {
 		long ind = s.indexOf("\n");
 		auto line = s[0..ind];
 		if (line.startsWith("---")) {
