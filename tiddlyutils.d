@@ -18,6 +18,7 @@ string output = "twsite.html";
 string tiddlersFile;
 string path = "";
 string defaults = "";
+string wikiname = "";
 bool stdout = false;
 bool strip = false;
 bool update = false;
@@ -32,6 +33,7 @@ void main(string[] args) {
 		"markdown|m", markdownDoc, &markdown,
 		"path|p", pathDoc, &path,
 		"defaults", defaultsDoc, &defaults,
+    "wikiname", wikinameDoc, &wikiname,
 		"output|o", outputDoc, &output,
 		"tiddlers", tiddlersDoc, &tiddlersFile,
 		"stdout", stdoutDoc, &stdout,
@@ -107,7 +109,9 @@ void main(string[] args) {
 	} else {
 		DirInfo[] actions;
 		foreach(dir; blocks) {
-			actions ~= DirInfo("blocks", dir);
+      auto tmp = DirInfo("blocks", dir);
+      tmp.wikiname = wikiname;
+			actions ~= tmp;
 		}
 		foreach(dir; tasks) {
 			actions ~= DirInfo("tasks", dir);
@@ -187,6 +191,7 @@ struct DirInfo {
 	string pattern = "*";
 	bool qualified = false;
 	string[] qualifiers;
+  string wikiname;
 	
 	this(string _action, string _dir) {
 		action = _action;
@@ -271,7 +276,7 @@ struct DirInfo {
 		string tiddlers;
 		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
 			if (f.isFile) {
-				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re), f.to!string)) {
+				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re), f.to!string, wikiname)) {
 					tiddlers ~= tmp ~ "\n";
 				}
 			}
@@ -385,13 +390,13 @@ string[] tiddlyBlocks(string s, Regex!char re) {
 }
 
 /* Converts an array of tiddly blocks to tiddlers */
-string[] convertTiddlers(string[] tiddlers, string f) {
+string[] convertTiddlers(string[] tiddlers, string f, string wikiname) {
   string id;
 	string aux(string s, string result=`<div gen="true" `) {
 		long ind = s.indexOf("\n");
 		auto line = s[0..ind];
 		if (line.startsWith("---")) {
-			string content = s[ind+1..$] ~ `<br><br><a href="{edit}?file=` ~ f ~ `&id=` ~ id ~ `">Edit this tiddler</a>`;
+			string content = s[ind+1..$] ~ `<br><br><a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ f ~ `&id=` ~ id ~ `">Edit this tiddler</a>`;
 			return result ~ "><pre>" ~ content.toHtml().deangle ~ "</pre></div>";
 		} else {
 			string[] data = line.split(":");
@@ -435,3 +440,4 @@ enum pathDoc = `If specified, this path is appended to all markdown files specif
 enum stripDoc = `Not currently used`;
 enum updateDoc = `Not currently used`;
 enum defaultsDoc = `Space-separated list of tiddlers to show when the wiki is first opened. If the name has spaces, use brackets: 'tiddler1 [[Tiddler with spaces in the name]] [[Another tiddler with spaces in the name]] tiddler 4'`;
+enum wikinameDoc = `Name of the wiki. Optional. Can be used to add info to edit links.`;
