@@ -260,7 +260,7 @@ struct DirInfo {
 		string tiddlers;
 		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
 			if (f.isFile) {
-				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re))) {
+				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re), f.to!string)) {
 					tiddlers ~= tmp ~ "\n";
 				}
 			}
@@ -374,18 +374,20 @@ string[] tiddlyBlocks(string s, Regex!char re) {
 }
 
 /* Converts an array of tiddly blocks to tiddlers */
-string[] convertTiddlers(string[] tiddlers) {
+string[] convertTiddlers(string[] tiddlers, string f) {
+  string id;
 	string aux(string s, string result=`<div gen="true" `) {
 		long ind = s.indexOf("\n");
 		auto line = s[0..ind];
 		if (line.startsWith("---")) {
-			string content = s[ind+1..$];
+			string content = s[ind+1..$] ~ `<br><br><a href="{edit}?file=` ~ f ~ `&id=` ~ id ~ `">Edit this tiddler</a>`;
 			return result ~ "><pre>" ~ content.toHtml().deangle ~ "</pre></div>";
 		} else {
 			string[] data = line.split(":");
 			string attr = data[0]._strip ~ `="` ~ data[1]._strip ~ `"`;
 			if (data[0]._strip == "created") {
 				attr ~= ` modified="` ~ data[1]._strip ~ `"`;
+        id = data[1]._strip;
 			}
 			return aux(s[ind+1..$], result ~ " " ~ attr);
 		}
