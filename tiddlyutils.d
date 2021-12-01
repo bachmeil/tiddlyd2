@@ -17,6 +17,7 @@ string input = "empty52.html";
 string output = "twsite.html";
 string tiddlersFile;
 string path = "";
+string defaults = "";
 bool stdout = false;
 bool strip = false;
 bool update = false;
@@ -24,17 +25,18 @@ bool update = false;
 void main(string[] args) {
 	auto rslt = getopt(args,
 		"tasks|t", tasksDoc, &tasks,
-		"blocks|b", &blocks,
-		"filter|f", &filters,
-		"input|i", &input,
-		"single|s", &singles,
-		"markdown|m", &markdown,
-		"path|p", &path,
-		"output|o", &output,
+		"blocks|b", blocksDoc, &blocks,
+		"filter|f", filterDoc, &filters,
+		"input|i", inputDoc, &input,
+		"single|s", singleDoc, &singles,
+		"markdown|m", markdownDoc, &markdown,
+		"path|p", pathDoc, &path,
+		"defaults", defaultsDoc, &defaults,
+		"output|o", outputDoc, &output,
 		"tiddlers", tiddlersDoc, &tiddlersFile,
 		"stdout", stdoutDoc, &stdout,
-		"strip", &strip,
-		"update", &update);
+		"strip", stripDoc, &strip,
+		"update", updateDoc, &update);
 	if (rslt.helpWanted) {
 		defaultGetoptPrinter(programDoc, rslt.options);
 	}
@@ -131,6 +133,9 @@ void main(string[] args) {
 				tiddlers ~= convertTiddler(f);
 			}
 		}
+		if (defaults != "") {
+			tiddlers ~= createTiddler(defaults, "$:/DefaultTiddlers", false);
+		}
 		if (tiddlersFile.length > 0) {
 			std.file.write(setExtension(expandTilde(tiddlersFile), "html"), tiddlers);
 			//~ writeln("Created tiddlers file at " ~ tiddlersFile);
@@ -146,12 +151,18 @@ void main(string[] args) {
 	}
 }
 
-/* Create a tiddler out of a string */
-string createTiddler(string s, string title) {
+/* Create a tiddler out of a string
+ * If you set convert to false, it will not convert s to html.
+ * That's useful for things like setting the default tiddlers. */
+string createTiddler(string s, string title, bool convert=true) {
+	string bodyText = s;
+	if (convert) {
+		bodyText = s.toHtml.deangle;
+	}
 	string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
 	return `<div gen="true" created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ title ~ `">
 <pre>
-` ~ s.toHtml.deangle ~ `
+` ~ bodyText ~ `
 </pre></div>
 `;
 }
@@ -412,5 +423,15 @@ Usage: tu [options]
 where the options are
 `;
 enum tasksDoc = `Convert the open tasks from the markdown files in the specified directory into tiddlers`;
+enum blocksDoc = `Convert the tiddly blocks in the markdown files in this directory to individual tiddlers`;
+enum filterDoc = `Add this filter as a tiddler using the list-links macro`;
+enum inputDoc = `The name of a TiddlyWiki file to use as the template for your TiddlyWiki. Cannot be the same as parameter output.`;
+enum singleDoc = `If an html file, will be treated as a group of tiddlers and added directly to your wiki. Normally this will be the output of a previous run of tiddlyutils with option tiddlers. If a markdown file, will be converted to its own tiddler.`;
+enum markdownDoc = `The name of a directory. All markdown files in that directory will be converted into individual tiddlers.`;
+enum outputDoc = `The name of the output file for your TiddlyWiki`;
 enum tiddlersDoc = `Save the created tiddlers in the file you've specified`;
 enum stdoutDoc = `Print the created tiddlers to the screen`;
+enum pathDoc = `If specified, this path is appended to all markdown files specified using the single option.`;
+enum stripDoc = `Not currently used`;
+enum updateDoc = `Not currently used`;
+enum defaultsDoc = `Space-separated list of tiddlers to show when the wiki is first opened. If the name has spaces, use brackets: 'tiddler1 [[Tiddler with spaces in the name]] [[Another tiddler with spaces in the name]] tiddler 4'`;
