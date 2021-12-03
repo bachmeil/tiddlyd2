@@ -108,10 +108,9 @@ void main(string[] args) {
 	// This is the interesting part of the code
 	} else {
 		DirInfo[] actions;
+		int[string] blockTypes;
 		foreach(dir; blocks) {
-      auto tmp = DirInfo("blocks", dir);
-      tmp.wikiname = wikiname;
-			actions ~= tmp;
+			actions ~= DirInfo("blocks", dir);
 		}
 		foreach(dir; tasks) {
 			actions ~= DirInfo("tasks", dir);
@@ -122,7 +121,11 @@ void main(string[] args) {
 		foreach(a; actions) {
 			//~ writeln(a.qualifiers);
 		}
-		string tiddlers = actions.map!(a => a.asTiddler()).join("\n");
+		string tiddlers;
+		if (blocks.length > 0) {
+			tiddlers ~= tocTiddler();
+		}
+		tiddlers ~= actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
 			if (exists(f)) {
 				if (extension(f) == ".html") {
@@ -155,6 +158,19 @@ void main(string[] args) {
 	}
 }
 
+string tocTiddler() {
+	string ts = timestamp();
+	return `<div created="` ~ ts ~ `" modified="` ~ ts ~ `" title="TableOfContents" tags="$:/tags/SideBar" caption="Contents" list-after="$:/core/ui/SideBar/Open">
+<pre>
+` ~ `<div class="tc-table-of-contents">
+
+<<toc-selective-expandable 'TableOfContents'>>
+
+</div>`.deangle ~ `
+</pre></div>
+`;
+}
+
 /* Create a tiddler out of a string
  * If you set convert to false, it will not convert s to html.
  * That's useful for things like setting the default tiddlers. */
@@ -176,7 +192,8 @@ string createTiddler(string s, string title, bool convert=true) {
 string convertTiddler(string f) {
 	string content = readText(f);
 	string filename = stripExtension(baseName(f));
-	string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
+	//~ string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
+	string timestamp = timestamp();
 	return `<div gen="true" created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ filename ~ `">
 <pre>
 ` ~ content.toHtml.deangle ~ `
@@ -191,7 +208,7 @@ struct DirInfo {
 	string pattern = "*";
 	bool qualified = false;
 	string[] qualifiers;
-  string wikiname;
+	string[] blockTypes;
 	
 	this(string _action, string _dir) {
 		action = _action;
@@ -276,12 +293,79 @@ struct DirInfo {
 		string tiddlers;
 		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
 			if (f.isFile) {
-				foreach(tmp; convertTiddlers(tiddlyBlocks(readText(f), re), f.to!string, wikiname)) {
-					tiddlers ~= tmp ~ "\n";
+				auto blocks = TiddlyBlocks(readText(f), re);
+				blockTypes = blocks.blockTypes();
+				foreach(block; blocks) {
+					tiddlers ~= block.html() ~ "\n";
 				}
 			}
 		}
 		return tiddlers;
+	}
+}
+
+struct Block {
+	string title;
+	string type;
+	string tags;
+	string content;
+	string filename;
+	string[string] other;
+	
+	this(string b) {
+		void aux(string s) {
+			auto ind = s.indexOf("\n");
+			auto line = s[0..ind];
+			if (line.strip == "---") {
+				content = s[ind+1..$];
+				return;
+			} else {
+				string[] data = line.split(":");
+				switch(data[0]._strip) {
+					case "title":
+						title = data[1]._strip;
+						break;
+					case "type":
+						type = data[1]._strip;
+						break;
+					case "tags":
+						tags ~= data[1]._strip;
+						break;
+					default:
+						other[data[0]._strip] = data[1]._strip;
+						break;
+				}
+			}
+		}
+	}
+	
+	string html() {
+		string ts = timestamp();
+		string div = `<div gen="true" title="` ~ title ~ `" type="` ~ type ~ `" tags="` ~ tags ~ " " ~ type ~ `" created="` ~ ts ~ `" modified="` ~ ts ~ `">`;
+		string editlink = `<a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ filename ~ `&id=` ~ id ~ `">Edit this tiddler</a>`;
+		return div ~ `<pre>` ~ (content ~ "<br><br>" ~ editlink).toHtml().deangle ~
+			`</pre></div>`;
+	}
+}
+
+struct TiddlyBlocks {
+	Block[] blocks;
+	
+	this(string fn, Regex re) {
+		string s = readText(fn);
+		foreach(m; s.matchAll(re)) {
+			auto block = Block(m[0].to!string["<pre><tiddler>".length..$-"</pre></tiddler>".length]);
+			block.filename = fn;
+			blocks ~= block;
+		}
+	}
+	
+	string[] blockTypes() {
+		int[string] result;
+		foreach(b; blocks) {
+			result[b.type] = 1;
+		}
+		return result.keys;
 	}
 }
 
@@ -414,6 +498,10 @@ string[] convertTiddlers(string[] tiddlers, string f, string wikiname) {
 		result ~= aux(tiddler);
 	}
 	return result;
+}
+
+string timestamp() {
+	return Clock.currTime.toISOString().replace("T", "").replace(".", "");
 }
 
 /* Documentation */
