@@ -108,10 +108,9 @@ void main(string[] args) {
 	// This is the interesting part of the code
 	} else {
 		DirInfo[] actions;
-		int[string] blockTypes;
-		foreach(dir; blocks) {
-			actions ~= DirInfo("blocks", dir);
-		}
+		//~ foreach(dir; blocks) {
+			//~ actions ~= DirInfo("blocks", dir);
+		//~ }
 		foreach(dir; tasks) {
 			actions ~= DirInfo("tasks", dir);
 		}
@@ -123,7 +122,24 @@ void main(string[] args) {
 		}
 		string tiddlers;
 		if (blocks.length > 0) {
+      auto re = regex(`<pre><tiddly>.*?</tiddly></pre>`, "s");
+      // Set up TOC
 			tiddlers ~= tocTiddler();
+      TiddlyBlocks tb;
+      foreach(dir; blocks) {
+        foreach(f; std.file.dirEntries(expandTilde(dir), "*.md", SpanMode.shallow)) {
+          tb.add(f, re);
+        }
+      }
+      string[] types = tb.blockTypes;
+      foreach(type; types) {
+        string ts = timestamp();
+        tiddlers ~= `<div gen="true" created="` ~ ts ~ `" modified="` ~ ts ~ 
+        `" title="` ~ type ~ `" tags="TableOfContents">
+<pre>
+` ~ (`<<list-links filter:"[type[` ~ type ~ `]]">>`).deangle ~ `
+</pre></div>
+`;      }
 		}
 		tiddlers ~= actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
@@ -293,9 +309,9 @@ struct DirInfo {
 		string tiddlers;
 		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
 			if (f.isFile) {
-				auto blocks = TiddlyBlocks(readText(f), re);
-				blockTypes = blocks.blockTypes();
-				foreach(block; blocks) {
+				auto tiddlyblocks = TiddlyBlocks(readText(f), re);
+				blockTypes = tiddlyblocks.blockTypes();
+				foreach(block; tiddlyblocks.blocks) {
 					tiddlers ~= block.html() ~ "\n";
 				}
 			}
@@ -312,37 +328,44 @@ struct Block {
 	string filename;
 	string[string] other;
 	
-	this(string b) {
+	void add(string b, string _filename) {
+    filename = _filename;
+    
 		void aux(string s) {
 			auto ind = s.indexOf("\n");
 			auto line = s[0..ind];
-			if (line.strip == "---") {
+			if (line._strip == "---") {
 				content = s[ind+1..$];
 				return;
 			} else {
 				string[] data = line.split(":");
-				switch(data[0]._strip) {
-					case "title":
-						title = data[1]._strip;
-						break;
-					case "type":
-						type = data[1]._strip;
-						break;
-					case "tags":
-						tags ~= data[1]._strip;
-						break;
-					default:
-						other[data[0]._strip] = data[1]._strip;
-						break;
-				}
+        // Allow blank lines
+        if (data.length > 1) {
+          switch(data[0]._strip) {
+            case "title":
+              title = data[1]._strip;
+              break;
+            case "type":
+              type = data[1]._strip;
+              break;
+            case "tags":
+              tags ~= data[1]._strip;
+              break;
+            default:
+              other[data[0]._strip] = data[1]._strip;
+              break;
+          }
+        }
 			}
+      return aux(s[ind+1..$]);
 		}
+    aux(b);
 	}
 	
 	string html() {
 		string ts = timestamp();
 		string div = `<div gen="true" title="` ~ title ~ `" type="` ~ type ~ `" tags="` ~ tags ~ " " ~ type ~ `" created="` ~ ts ~ `" modified="` ~ ts ~ `">`;
-		string editlink = `<a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ filename ~ `&id=` ~ id ~ `">Edit this tiddler</a>`;
+		string editlink = `<a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ filename ~ `&id=` ~ ts ~ `">Edit this tiddler</a>`;
 		return div ~ `<pre>` ~ (content ~ "<br><br>" ~ editlink).toHtml().deangle ~
 			`</pre></div>`;
 	}
@@ -351,18 +374,27 @@ struct Block {
 struct TiddlyBlocks {
 	Block[] blocks;
 	
-	this(string fn, Regex re) {
+	this(string fn, Regex!char re) {
+		add(fn, re);
+	}
+  
+  void add(string fn, Regex!char re) {
 		string s = readText(fn);
-		foreach(m; s.matchAll(re)) {
-			auto block = Block(m[0].to!string["<pre><tiddler>".length..$-"</pre></tiddler>".length]);
-			block.filename = fn;
-			blocks ~= block;
+    enum len1 = "<pre><tiddly>".length;
+    enum len2 = "</pre></tiddly>".length;
+    //~ writeln("all matches: ", s.matchAll(re));
+		foreach(match; s.matchAll(re)) {
+      //~ writeln("this match is: ", match[0].to!string[len1..$-len2]);
+      Block bb;
+      bb.add(match[0].to!string[len1..$-len2], fn);
+			blocks ~= bb;
 		}
 	}
 	
 	string[] blockTypes() {
 		int[string] result;
 		foreach(b; blocks) {
+      //~ writeln(b);
 			result[b.type] = 1;
 		}
 		return result.keys;
