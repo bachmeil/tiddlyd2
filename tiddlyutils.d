@@ -135,11 +135,15 @@ void main(string[] args) {
       foreach(type; types) {
         string ts = timestamp();
         tiddlers ~= `<div gen="true" created="` ~ ts ~ `" modified="` ~ ts ~ 
-        `" title="` ~ type ~ `" tags="TableOfContents">
+        `" title="` ~ type ~ ` index" tags="TableOfContents">
 <pre>
 ` ~ (`<<list-links filter:"[type[` ~ type ~ `]]">>`).deangle ~ `
 </pre></div>
-`;      }
+`;      
+      }
+      foreach(block; tb.blocks) {
+        tiddlers ~= block.html ~ "\n";
+      }
 		}
 		tiddlers ~= actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
@@ -322,7 +326,7 @@ struct DirInfo {
 
 struct Block {
 	string title;
-	string type;
+	string type = "no type given";
 	string tags;
 	string content;
 	string filename;
@@ -347,6 +351,7 @@ struct Block {
               break;
             case "type":
               type = data[1]._strip;
+              tags ~= " " ~ data[1]._strip ~ "_index ";
               break;
             case "tags":
               tags ~= data[1]._strip;
@@ -364,9 +369,10 @@ struct Block {
 	
 	string html() {
 		string ts = timestamp();
-		string div = `<div gen="true" title="` ~ title ~ `" type="` ~ type ~ `" tags="` ~ tags ~ " " ~ type ~ `" created="` ~ ts ~ `" modified="` ~ ts ~ `">`;
+		string div = `<div gen="true" title="` ~ title ~ `" type="` ~ type ~ `" tags="` ~ tags  ~ `" created="` ~ ts ~ `" modified="` ~ ts ~ `">`;
 		string editlink = `<a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ filename ~ `&id=` ~ ts ~ `">Edit this tiddler</a>`;
-		return div ~ `<pre>` ~ (content ~ "<br><br>" ~ editlink).toHtml().deangle ~
+		writeln("Link for editing: ", editlink);
+    return div ~ `<pre>` ~ (content ~ "<br><br>" ~ editlink).toHtml().deangle ~
 			`</pre></div>`;
 	}
 }
