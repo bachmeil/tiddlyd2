@@ -144,6 +144,7 @@ void main(string[] args) {
       foreach(block; tb.blocks) {
         tiddlers ~= block.html ~ "\n";
       }
+      tiddlers ~= defaultTab();
 		}
 		tiddlers ~= actions.map!(a => a.asTiddler()).join("\n");
 		foreach(f; singles) {
@@ -540,6 +541,10 @@ string[] convertTiddlers(string[] tiddlers, string f, string wikiname) {
 
 string timestamp() {
 	return Clock.currTime.toISOString().replace("T", "").replace(".", "");
+}
+
+string defaultTab() {
+  return createTiddler("$:/core/ui/SideBar/Contents", "$:/config/DefaultSidebarTab", false);
 }
 
 /* Documentation */
