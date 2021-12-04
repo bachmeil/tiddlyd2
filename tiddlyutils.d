@@ -123,6 +123,7 @@ void main(string[] args) {
         }
       }
       string[] types = tb.blockTypes;
+      // Add this as a method for TiddlyBlocks
       foreach(type; types) {
         string ts = timestamp();
         tiddlers ~= `<div gen="true" created="` ~ ts ~ `" modified="` ~ ts ~ 
