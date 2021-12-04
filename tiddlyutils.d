@@ -157,7 +157,6 @@ void main(string[] args) {
 		}
 		if (tiddlersFile.length > 0) {
 			std.file.write(setExtension(expandTilde(tiddlersFile), "html"), tiddlers);
-			//~ writeln("Created tiddlers file at " ~ tiddlersFile);
 		} else if (stdout) {
 			writeln(tiddlers);
 		} else {
@@ -165,46 +164,45 @@ void main(string[] args) {
 				`<div id="storeArea" style="display:none;"></div>`,
 				`<div id="storeArea" style="display:none;">`
 				~ tiddlers ~ `</div>`));
-			//~ writeln("Created file " ~ output);
 		}
 	}
 }
 
 /* Returns all the tiddly blocks in a markdown file as an array */
-string[] tiddlyBlocks(string s, Regex!char re) {
-  string[] result;
-  foreach(m; s.matchAll(re)) {
-    result ~= m[0].to!string["<pre><tiddler>".length..$-"</pre></tiddler>".length];
-  }
-  return result;
-}
+//~ string[] tiddlyBlocks(string s, Regex!char re) {
+  //~ string[] result;
+  //~ foreach(m; s.matchAll(re)) {
+    //~ result ~= m[0].to!string["<pre><tiddler>".length..$-"</pre></tiddler>".length];
+  //~ }
+  //~ return result;
+//~ }
 
 /* Converts an array of tiddly blocks to tiddlers */
-string[] convertTiddlers(string[] tiddlers, string f, string wikiname) {
-  string id;
-	string aux(string s, string result=`<div gen="true" `) {
-		long ind = s.indexOf("\n");
-		auto line = s[0..ind];
-		if (line.startsWith("---")) {
-			string content = s[ind+1..$] ~ `<br><br><a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ f ~ `&id=` ~ id ~ `">Edit this tiddler</a>`;
-			return result ~ "><pre>" ~ content.toHtml().deangle ~ "</pre></div>";
-		} else {
-			string[] data = line.split(":");
-			string attr = data[0]._strip ~ `="` ~ data[1]._strip ~ `"`;
-			if (data[0]._strip == "created") {
-				attr ~= ` modified="` ~ data[1]._strip ~ `"`;
-        id = data[1]._strip;
-			}
-			return aux(s[ind+1..$], result ~ " " ~ attr);
-		}
-	}
+//~ string[] convertTiddlers(string[] tiddlers, string f, string wikiname) {
+  //~ string id;
+	//~ string aux(string s, string result=`<div gen="true" `) {
+		//~ long ind = s.indexOf("\n");
+		//~ auto line = s[0..ind];
+		//~ if (line.startsWith("---")) {
+			//~ string content = s[ind+1..$] ~ `<br><br><a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ f ~ `&id=` ~ id ~ `">Edit this tiddler</a>`;
+			//~ return result ~ "><pre>" ~ content.toHtml().deangle ~ "</pre></div>";
+		//~ } else {
+			//~ string[] data = line.split(":");
+			//~ string attr = data[0]._strip ~ `="` ~ data[1]._strip ~ `"`;
+			//~ if (data[0]._strip == "created") {
+				//~ attr ~= ` modified="` ~ data[1]._strip ~ `"`;
+        //~ id = data[1]._strip;
+			//~ }
+			//~ return aux(s[ind+1..$], result ~ " " ~ attr);
+		//~ }
+	//~ }
 	
-	string[] result;
-	foreach(tiddler; tiddlers) {
-		result ~= aux(tiddler);
-	}
-	return result;
-}
+	//~ string[] result;
+	//~ foreach(tiddler; tiddlers) {
+		//~ result ~= aux(tiddler);
+	//~ }
+	//~ return result;
+//~ }
 
 /* Documentation */
 enum programDoc = `tiddlyutils is a program that converts the information in markdown files into a TiddlyWiki file that can be loaded in the browser and read, queried, and filtered.
