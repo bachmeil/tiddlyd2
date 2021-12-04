@@ -3,6 +3,7 @@
  * 
  * --stdout: Output the tiddlers to the screen.
  */
+import tu.blocks, tu.common, tu.dirinfo;
 import std.algorithm, std.array, std.conv, std.datetime, std.exception;
 import std.file, std.getopt, std.path;
 import std.process, std.regex, std.stdio, std.string;
@@ -68,11 +69,6 @@ void main(string[] args) {
 			} else if (line.startsWith(`"title":"$:/plugin`)) {
 				core ~= line ~ "\n";
 			} else {
-				if (line.length > 50) {
-					//~ writeln(line[0..50]);
-				} else {
-					//~ writeln(line);
-				}
 				other ~= line ~ "\n";
 			}
 		}
@@ -108,17 +104,11 @@ void main(string[] args) {
 	// This is the interesting part of the code
 	} else {
 		DirInfo[] actions;
-		//~ foreach(dir; blocks) {
-			//~ actions ~= DirInfo("blocks", dir);
-		//~ }
 		foreach(dir; tasks) {
 			actions ~= DirInfo("tasks", dir);
 		}
 		foreach(f; filters) {
 			actions ~= DirInfo("filter", f);
-		}
-		foreach(a; actions) {
-			//~ writeln(a.qualifiers);
 		}
 		string tiddlers;
 		if (blocks.length > 0) {
@@ -126,6 +116,7 @@ void main(string[] args) {
       // Set up TOC
 			tiddlers ~= tocTiddler();
       TiddlyBlocks tb;
+      tb.wikiname = wikiname;
       foreach(dir; blocks) {
         foreach(f; std.file.dirEntries(expandTilde(dir), "*.md", SpanMode.shallow)) {
           tb.add(f, re);
@@ -179,330 +170,6 @@ void main(string[] args) {
 	}
 }
 
-string tocTiddler() {
-	string ts = timestamp();
-	return `<div created="` ~ ts ~ `" modified="` ~ ts ~ `" title="TableOfContents" tags="$:/tags/SideBar" caption="Contents" list-after="$:/core/ui/SideBar/Open">
-<pre>
-` ~ `<div class="tc-table-of-contents">
-
-<<toc-selective-expandable 'TableOfContents'>>
-
-</div>`.deangle ~ `
-</pre></div>
-`;
-}
-
-/* Create a tiddler out of a string
- * If you set convert to false, it will not convert s to html.
- * That's useful for things like setting the default tiddlers. */
-string createTiddler(string s, string title, bool convert=true) {
-	string bodyText = s;
-	if (convert) {
-		bodyText = s.toHtml.deangle;
-	}
-	string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
-	return `<div gen="true" created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ title ~ `">
-<pre>
-` ~ bodyText ~ `
-</pre></div>
-`;
-}
-
-/* Converts a markdown file to a tiddler 
- * f is the filename */
-string convertTiddler(string f) {
-	string content = readText(f);
-	string filename = stripExtension(baseName(f));
-	//~ string timestamp = Clock.currTime.toISOString().replace("T", "").replace(".", "");
-	string timestamp = timestamp();
-	return `<div gen="true" created="` ~ timestamp ~ `" modified="` ~ timestamp ~ `" title="` ~ filename ~ `">
-<pre>
-` ~ content.toHtml.deangle ~ `
-</pre></div>
-`;
-}
-
-/* For processing a directory, with an optional pattern */
-struct DirInfo {
-	string action;
-	string dir;
-	string pattern = "*";
-	bool qualified = false;
-	string[] qualifiers;
-	string[] blockTypes;
-	
-	this(string _action, string _dir) {
-		action = _action;
-		string[] ds = _dir.split("{");
-		// No pattern
-		if (ds.length == 1) {
-			string[] ds2 = _dir.split("@");
-			// No qualifiers
-			if (ds2.length == 1) {
-				dir = _dir;
-				pattern = "*";
-			// Qualifiers
-			} else {
-				dir = ds2[0];
-				qualified = true;
-				foreach(q; ds2[1..$]) {
-					qualifiers ~= "@" ~ q;
-				}
-			}
-		// Pattern
-		} else {
-			string[] ds2 = ds[0].split("@");
-			// No qualifiers
-			if (ds2.length == 1) {
-				dir = ds[0];
-				pattern = ds[1][0..$-1];
-			// Qualifiers
-			} else {
-				dir = ds2[0];
-				qualified = true;
-				foreach(q; ds2[1..$]) {
-					qualifiers ~= "@" ~ q;
-				}
-				pattern = ds[1][0..$-1];
-			}
-		}
-	}
-	
-	string asTiddler() {
-		if (action == "tasks") {
-			string result;
-			if (qualified) {
-				foreach(q; qualifiers) {
-					result ~= createTiddler(processTasks(q), "Open " ~ q ~ " tasks in " ~ dir);
-				}
-			} else {
-				result = createTiddler(processTasks(), "Open tasks in " ~ dir);
-			}
-			return result;
-		} else if (action == "blocks") {
-			// Many tiddlers
-			return processBlocks();
-		} else if (action == "filter") {
-			return createTiddler(`<<list-links filter:'` ~ dir ~ `'>>`, pattern);
-		} else {
-			return "Action " ~ action ~ " not supported";
-		}
-	}
-	
-	/* If dir ends with @foo, only capture those tasks */
-	string processTasks(string qualifier="") {
-		string mdfile;
-		string[] files;
-		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
-			if (f.isFile) {
-				string tasks;
-				if (qualified) {
-					tasks = openTasks(f, qualifier);
-				} else {
-					tasks = openTasks(f);
-				}
-				if (tasks.length > 0) {
-					mdfile ~= "# " ~ stripExtension(baseName(f)) ~ "\n\n" ~ tasks ~ "\n\n";
-				}
-			}
-		}
-		return mdfile;
-	}
-	
-	string processBlocks() {
-		auto re = regex(`<pre><tiddly>.*?</tiddly></pre>`, "s");
-		string tiddlers;
-		foreach(f; std.file.dirEntries(expandTilde(dir), pattern, SpanMode.shallow).array.sort!"a > b") {
-			if (f.isFile) {
-				auto tiddlyblocks = TiddlyBlocks(readText(f), re);
-				blockTypes = tiddlyblocks.blockTypes();
-				foreach(block; tiddlyblocks.blocks) {
-					tiddlers ~= block.html() ~ "\n";
-				}
-			}
-		}
-		return tiddlers;
-	}
-}
-
-struct Block {
-	string title;
-	string type = "no type given";
-	string tags;
-	string content;
-	string filename;
-	string[string] other;
-	
-	void add(string b, string _filename) {
-    filename = _filename;
-    
-		void aux(string s) {
-			auto ind = s.indexOf("\n");
-			auto line = s[0..ind];
-			if (line._strip == "---") {
-				content = s[ind+1..$];
-				return;
-			} else {
-				string[] data = line.split(":");
-        // Allow blank lines
-        if (data.length > 1) {
-          switch(data[0]._strip) {
-            case "title":
-              title = data[1]._strip;
-              break;
-            case "type":
-              type = data[1]._strip;
-              tags ~= " " ~ data[1]._strip ~ "_index ";
-              break;
-            case "tags":
-              tags ~= data[1]._strip;
-              break;
-            default:
-              other[data[0]._strip] = data[1]._strip;
-              break;
-          }
-        }
-			}
-      return aux(s[ind+1..$]);
-		}
-    aux(b);
-	}
-	
-	string html() {
-		string ts = timestamp();
-		string div = `<div gen="true" title="` ~ title ~ `" type="` ~ type ~ `" tags="` ~ tags  ~ `" created="` ~ ts ~ `" modified="` ~ ts ~ `">`;
-		string editlink = `<a href="{edit}?wikiname=` ~ wikiname ~ `&file=` ~ filename ~ `&id=` ~ ts ~ `">Edit this tiddler</a>`;
-		writeln("Link for editing: ", editlink);
-    return div ~ `<pre>` ~ (content ~ "<br><br>" ~ editlink).toHtml().deangle ~
-			`</pre></div>`;
-	}
-}
-
-struct TiddlyBlocks {
-	Block[] blocks;
-	
-	this(string fn, Regex!char re) {
-		add(fn, re);
-	}
-  
-  void add(string fn, Regex!char re) {
-		string s = readText(fn);
-    enum len1 = "<pre><tiddly>".length;
-    enum len2 = "</pre></tiddly>".length;
-    //~ writeln("all matches: ", s.matchAll(re));
-		foreach(match; s.matchAll(re)) {
-      //~ writeln("this match is: ", match[0].to!string[len1..$-len2]);
-      Block bb;
-      bb.add(match[0].to!string[len1..$-len2], fn);
-			blocks ~= bb;
-		}
-	}
-	
-	string[] blockTypes() {
-		int[string] result;
-		foreach(b; blocks) {
-      //~ writeln(b);
-			result[b.type] = 1;
-		}
-		return result.keys;
-	}
-}
-
-/* Find all open tasks in a markdown file 
- * Return a markdown list holding them
- * f is the filename */
-string openTasks(string f, string qualifier="") {
-	//~ writeln("Inside file: ", f);
-	//~ writeln("-------------------------");
-	string content = readText(f);
-	
-	string result;
-	bool insideTask = false;
-	string thisTask;
-	foreach(ii, line; content.split("\n")) {
-		//~ writeln(ii, " ", insideTask);
-		if (insideTask) {
-			if (line.newTask) {
-				if (thisTask.includesQualifier(qualifier)) {
-					//~ writeln("+--------------+");
-					//~ writeln("+ Contains qualifier " ~ qualifier);
-					//~ writeln(thisTask);
-					//~ writeln("----------------");
-					result ~= thisTask;
-					thisTask = line ~ "\n";
-				}
-				//~ writeln(ii, " Resetting task, currently equal to ", thisTask);
-				thisTask = line ~ "\n";
-			}
-			
-			if (line.leftTask) {
-				if (thisTask.includesQualifier(qualifier)) {
-					//~ writeln("+--------------+");
-					//~ writeln("+ Contains qualifier " ~ qualifier);
-					//~ writeln(thisTask);
-					//~ writeln("----------------");
-					result ~= thisTask;
-				}
-				insideTask = false;
-				thisTask = "";
-			}
-		}
-		
-		// I know how to use else
-		if (!insideTask) {
-			if (line.startsWith("- [ ] ")) {
-				thisTask = line ~ "\n";
-				insideTask = true;
-			}
-		}
-	}
-	result ~= thisTask;
-	return result;
-}
-
-/* Returns true if the task includes the qualifier OR if
- * there is no qualifier */
-bool includesQualifier(string task, string qualifier) {
-	if (qualifier == "") {
-		return true;
-	} else if (task.indexOf(qualifier) > 0) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-bool blankLine(string line) {
-	return (line._strip == "") & (!line.startsWith("  "));
-}
-
-bool newBullet(string line) {
-	return line.startsWith("- ");
-}
-
-bool newTask (string line) {
-	return line.startsWith("- [ ] ");
-}
-
-bool leftTask(string line) {
-	return blankLine(line) | (newBullet(line) & !newTask(line));
-}	
-
-string toHtml(string md) {
-	string cmd = "echo " ~ md.sq ~ " | pandoc -f markdown-smart+task_lists -t html";
-	return executeShell(cmd).output;
-}
-
-// Handle single quotes properly for the shell
-string sq(string s) {
-	return `'` ~ s.replace(`'`, `'"'"'`) ~ `'`;
-}
-
-// Replace all angle brackets
-string deangle(string s) {
-	return s.replace("<", "&lt;").replace(">", "&gt;");
-}
-
 /* Returns all the tiddly blocks in a markdown file as an array */
 string[] tiddlyBlocks(string s, Regex!char re) {
   string[] result;
@@ -537,14 +204,6 @@ string[] convertTiddlers(string[] tiddlers, string f, string wikiname) {
 		result ~= aux(tiddler);
 	}
 	return result;
-}
-
-string timestamp() {
-	return Clock.currTime.toISOString().replace("T", "").replace(".", "");
-}
-
-string defaultTab() {
-  return createTiddler("$:/core/ui/SideBar/Contents", "$:/config/DefaultSidebarTab", false);
 }
 
 /* Documentation */

@@ -1,5 +1,5 @@
 utils:
-	ldmd2 tiddlyutils.d -oftiddlyutils.exe
+	ldmd2 tiddlyutils.d blocks.d common.d dirinfo.d -oftiddlyutils.exe
 	mv tiddlyutils.exe ~/bin/tu
 	rm *.o
 
