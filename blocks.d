@@ -85,7 +85,21 @@ struct TiddlyBlocks {
 			blocks ~= bb;
 		}
 	}
-	
+  
+  string tocTypes() {
+    string result;
+    foreach(type; blockTypes()) {
+      string ts = timestamp();
+      result ~= `<div gen="true" created="` ~ ts ~ `" modified="` ~ ts ~ 
+        `" title="` ~ type ~ ` index" tags="TableOfContents">
+<pre>
+` ~ (`<<list-links filter:"[type[` ~ type ~ `]]">>`).deangle ~ `
+</pre></div>
+`;      
+    }
+    return result;
+  }    
+
 	string[] blockTypes() {
 		int[string] result;
 		foreach(b; blocks) {

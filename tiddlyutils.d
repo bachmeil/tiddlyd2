@@ -122,20 +122,11 @@ void main(string[] args) {
           tb.add(f, re);
         }
       }
-      string[] types = tb.blockTypes;
-      // Add this as a method for TiddlyBlocks
-      foreach(type; types) {
-        string ts = timestamp();
-        tiddlers ~= `<div gen="true" created="` ~ ts ~ `" modified="` ~ ts ~ 
-        `" title="` ~ type ~ ` index" tags="TableOfContents">
-<pre>
-` ~ (`<<list-links filter:"[type[` ~ type ~ `]]">>`).deangle ~ `
-</pre></div>
-`;      
-      }
       foreach(block; tb.blocks) {
         tiddlers ~= block.html ~ "\n";
       }
+      // Add tiddlers for each type to the TOC
+      tiddlers ~= tb.tocTypes();
       tiddlers ~= defaultTab();
 		}
 		tiddlers ~= actions.map!(a => a.asTiddler()).join("\n");
