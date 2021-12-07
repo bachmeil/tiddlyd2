@@ -91,7 +91,7 @@ struct TiddlyBlocks {
     foreach(type; blockTypes()) {
       string ts = timestamp();
       result ~= `<div gen="true" created="` ~ ts ~ `" modified="` ~ ts ~ 
-        `" title="` ~ type ~ ` index" tags="TableOfContents">
+        `" title="` ~ type ~ `_index" tags="TableOfContents">
 <pre>
 ` ~ (`<<list-links filter:"[type[` ~ type ~ `]]">>`).deangle ~ `
 </pre></div>
